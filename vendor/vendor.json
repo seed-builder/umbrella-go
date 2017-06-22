@@ -1,0 +1,19 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "GZ3aucF6aX6k1sAlzkbuk/Xa37k=",
+			"path": "github.com/gin-gonic/gin",
+			"revision": "d5b353c5d5a560322e6d96121c814115562501f7",
+			"revisionTime": "2017-04-28T10:59:23Z"
+		},
+		{
+			"checksumSHA1": "ALVQR0NSWEE8fFoD9jZKYwr28HY=",
+			"path": "github.com/jinzhu/gorm",
+			"revision": "5b509264e18b609330546e6f792a407a98aaf491",
+			"revisionTime": "2017-04-17T02:34:52Z"
+		}
+	],
+	"rootPath": "umbrella"
+}
