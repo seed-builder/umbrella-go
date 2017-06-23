@@ -1,10 +1,10 @@
-package main
+package utilities
 
 import (
 	"fmt"
 	"github.com/jinzhu/gorm"
+	_ "github.com/go-sql-driver/mysql"
 	"log"
-	"umbrella/utl"
 )
 
 var MyDB *gorm.DB
@@ -13,10 +13,10 @@ func init() {
 	var err error
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s)/%s?charset=utf8&parseTime=True&loc=Local",
-		utl.SysConfig.DbUser,
-		utl.SysConfig.DbPassword,
-		utl.SysConfig.DbServer,
-		utl.SysConfig.DbDatabase,
+		SysConfig.DbUser,
+		SysConfig.DbPassword,
+		SysConfig.DbServer,
+		SysConfig.DbDatabase,
 	)
 
 	MyDB, err = gorm.Open("mysql", dsn)

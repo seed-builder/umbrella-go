@@ -8,6 +8,8 @@ import (
 	"time"
 	"fmt"
 	"os"
+	"umbrella/apiroutes"
+	"umbrella/utilities"
 )
 
 func main(){
@@ -24,14 +26,17 @@ func restApi()  {
 	router.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "Hello world!" )
 	})
-	router.Run(":8080")
+	apiroutes.LoadEquipmentRoutes(router)
+	apiroutes.LoadUmbrellaRoutes(router)
+
+	router.Run(":" + utilities.SysConfig.HttpPort)
 
 }
 
 func machineSvr(){
 	log.Println("machine service begin...")
 
-	service := ":7777"
+	service := utilities.SysConfig.TcpPort
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
 	checkError(err)
 	listener, err := net.ListenTCP("tcp", tcpAddr)

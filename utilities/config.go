@@ -1,4 +1,4 @@
-package utl
+package utilities
 
 import (
 	"io/ioutil"
@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	HttpPort string `yaml:"http_port"`
+	TcpPort string `yaml:"tcp_port"`
 	Debug bool `yaml:"debug"`
 	DbDialect string `yaml:"db_dialect"`
 	DbServer string `yaml:"db_server"`
