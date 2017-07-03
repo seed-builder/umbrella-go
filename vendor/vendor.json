@@ -13,6 +13,12 @@
 			"path": "github.com/jinzhu/gorm",
 			"revision": "5b509264e18b609330546e6f792a407a98aaf491",
 			"revisionTime": "2017-04-17T02:34:52Z"
+		},
+		{
+			"checksumSHA1": "T7jLSNOHVUEjhZhEsJwFxIHRV7Y=",
+			"path": "github.com/mitchellh/mapstructure",
+			"revision": "d0303fe809921458f417bcf828397a65db30a7e4",
+			"revisionTime": "2017-05-23T03:00:23Z"
 		}
 	],
 	"rootPath": "umbrella"

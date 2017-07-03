@@ -3,6 +3,7 @@ package models
 import(
 	"github.com/jinzhu/gorm"
 	"umbrella/utilities"
+	"github.com/mitchellh/mapstructure"
 )
 
 type Umbrella struct {
@@ -17,15 +18,11 @@ type Umbrella struct {
 	Logo string
 }
 
-
-func (m *Umbrella) Save() error{
-	utilities.MyDB.Save(m)
-	return nil
-}
-
-func (m *Umbrella) Remove() error{
-	utilities.MyDB.Delete(m)
-	return nil
+func NewUmbrella(data map[string]interface{}) *Umbrella  {
+	eq := Umbrella{}
+	mapstructure.Decode(data, &eq)
+	eq.Entity = &eq
+	return &eq
 }
 
 func (Umbrella) TableName() string {

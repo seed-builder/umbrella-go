@@ -2,8 +2,7 @@ package models
 
 import (
 	"github.com/jinzhu/gorm"
-	"log"
-	"umbrella/utilities"
+	"github.com/mitchellh/mapstructure"
 )
 
 type Site struct {
@@ -19,23 +18,18 @@ type Site struct {
 	Type int
 }
 
-func (m *Site) Save() error{
-	utilities.MyDB.Save(m)
-	return nil
+func NewSite(data map[string]interface{}) *Site  {
+	site := Site{}
+	mapstructure.Decode(data, &site)
+	site.Entity = &site
+	return &site
 }
 
-func (m *Site) Remove() error{
-	utilities.MyDB.Delete(m)
-	return nil
-}
-
-
-func (Site) TableName() string {
+func (m Site) TableName() string {
 	return "sites"
 }
 
 func (m *Site) BeforeSave() (err error) {
-	log.Println("before save")
 	return nil
 }
 

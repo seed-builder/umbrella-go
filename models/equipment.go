@@ -3,6 +3,7 @@ package models
 import (
 	"github.com/jinzhu/gorm"
 	"umbrella/utilities"
+	"github.com/mitchellh/mapstructure"
 )
 
 type Equipment struct {
@@ -18,14 +19,11 @@ type Equipment struct {
 }
 
 
-func (m *Equipment) Save() error{
-	utilities.MyDB.Save(m)
-	return nil
-}
-
-func (m *Equipment) Remove() error{
-	utilities.MyDB.Delete(m)
-	return nil
+func NewEquipment(data map[string]interface{}) *Equipment  {
+	eq := Equipment{}
+	mapstructure.Decode(data, &eq)
+	eq.Entity = &eq
+	return &eq
 }
 
 func (Equipment) TableName() string {
