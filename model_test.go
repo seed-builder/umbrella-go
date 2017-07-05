@@ -9,7 +9,7 @@ import (
 
 func Test_Create(t *testing.T) {
 
-	site := models.NewSite(gin.H{ "Name": "test33", "Province":"test33", "City": "test33", "District": "test33"}) //models.Site{ Name: "test22", Province:"test22", City: "test22", District: "tst22"}
+	site := models.NewSite(gin.H{ "Name": "test44", "Province":"test44", "City": "test44", "District": "test44"}) //models.Site{ Name: "test22", Province:"test22", City: "test22", District: "tst22"}
 	//site := models.Site{ Name: "test33", Province:"test33", City: "test33", District: "test33"}
 	//site.Entity = site
 	//site.Name = "site222"
