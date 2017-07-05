@@ -7,8 +7,16 @@ const (
 	CmdUmbrellaOutRspPktLen uint32 = 12 + 1
 )
 
+type UmbrellaOutStatus uint8
+
+const (
+	//成功记录借伞
+	UmbrellaOutStatusSuccess UmbrellaOutStatus = iota + 1
+	UmbrellaOutStatusFail
+)
+
+
 type CmdUmbrellaOutReqPkt struct{
-	EquipmentSn string
 	ChannelNum uint8
 	UmbrellaSn string
 
@@ -16,7 +24,7 @@ type CmdUmbrellaOutReqPkt struct{
 }
 
 type CmdUmbrellaOutRspPkt struct{
-	Reserved uint8
+	Status uint8
 	SeqId uint32
 }
 
@@ -31,7 +39,7 @@ func (p *CmdUmbrellaOutReqPkt) Pack(seqId uint32) ([]byte, error) {
 	w.WriteInt(binary.BigEndian, CMD_CONNECT)
 	w.WriteInt(binary.BigEndian, seqId)
 	p.SeqId = seqId
-	w.WriteFixedSizeString(p.EquipmentSn, 11)
+	//w.WriteFixedSizeString(p.EquipmentSn, 11)
 	w.WriteByte(p.ChannelNum)
 	w.WriteFixedSizeString(p.UmbrellaSn, 11)
 
@@ -46,8 +54,8 @@ func (p *CmdUmbrellaOutReqPkt) Unpack(data []byte) error {
 
 	// Sequence Id
 	r.ReadInt(binary.BigEndian, &p.SeqId)
-	sn := r.ReadCString(11)
-	p.EquipmentSn = string(sn)
+	//sn := r.ReadCString(11)
+	//p.EquipmentSn = string(sn)
 	p.ChannelNum = r.ReadByte()
 	usn := r.ReadCString(11)
 	p.UmbrellaSn = string(usn)
@@ -67,7 +75,7 @@ func (p *CmdUmbrellaOutRspPkt) Pack(seqId uint32) ([]byte, error) {
 	w.WriteInt(binary.BigEndian, CMD_CONNECT)
 	w.WriteInt(binary.BigEndian, seqId)
 	p.SeqId = seqId
-	w.WriteByte(p.Reserved)
+	w.WriteByte(p.Status)
 
 	return w.Bytes()
 }
@@ -80,7 +88,7 @@ func (p *CmdUmbrellaOutRspPkt) Unpack(data []byte) error {
 
 	// Sequence Id
 	r.ReadInt(binary.BigEndian, &p.SeqId)
-	p.Reserved = r.ReadByte()
+	p.Status = r.ReadByte()
 
 	return r.Error()
 }

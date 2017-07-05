@@ -47,11 +47,11 @@ func (es *EquipmentService) ListenAndServe(addr string, ver  network.Type, t tim
 	return server.ListenAndServe()
 }
 
-func (es *EquipmentService) UmbrellaIn(equipmentSn string, umbrellaSn string, channelNum uint8){
+func (es *EquipmentService) UmbrellaIn(equipmentSn string, umbrellaSn string, channelNum uint8)  network.UmbrellaInStatus {
 
 }
 
-func (es *EquipmentService) UmbrellaOut(equipmentSn string, umbrellaSn string, channelNum uint8){
+func (es *EquipmentService) UmbrellaOut(equipmentSn string, umbrellaSn string, channelNum uint8) {
 
 }
 

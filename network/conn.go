@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"io"
 	"sync"
+	"umbrella/models"
 )
 
 type State uint8
@@ -39,6 +40,8 @@ type Conn struct {
 	// for SeqId generator goroutine
 	SeqId <-chan uint32
 	done  chan<- struct{}
+
+	Equipment *models.Equipment
 }
 
 func newSeqIdGenerator() (<-chan uint32, chan<- struct{}) {
@@ -88,6 +91,10 @@ func (c *Conn) Close() {
 
 func (c *Conn) SetState(state State) {
 	c.State = state
+}
+
+func (c *Conn) SetEquipment(equipment *models.Equipment){
+	c.Equipment = equipment
 }
 
 // SendPkt pack the CMD packet structure and send it to the other peer.

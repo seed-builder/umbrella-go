@@ -21,6 +21,8 @@ func handleConnect(r *network.Response, p *network.Packet, l *log.Logger) (bool,
 		eq.Query().First(&eq, "sn", req.EquipmentSn)
 		if eq.ID > 0 {
 			resp.Status = network.ConnectSuccess
+			r.Packet.Conn.SetState( network.CONN_AUTHOK )
+			r.Packet.Conn.SetEquipment(&eq)
 			EquipmentSrv.RegisterConn(req.EquipmentSn, r.Packet.Conn)
 		}else{
 			resp.Status = network.ConnectWrongSn
@@ -31,15 +33,15 @@ func handleConnect(r *network.Response, p *network.Packet, l *log.Logger) (bool,
 
 //handleUmbrellaIn: umbrella in channel request
 func handleUmbrellaIn(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
-	req, ok := p.Packer.(*network.CmdUmbrellaOutReqPkt)
+	req, ok := p.Packer.(*network.CmdUmbrellaInReqPkt)
 	if !ok {
 		// not a connect request, ignore it,
 		// go on to next handler
 		return true, nil
 	}
 	resp := r.Packer.(*network.CmdUmbrellaOutRspPkt)
-	resp.Reserved = 1
-	go EquipmentSrv.UmbrellaIn(req.EquipmentSn, req.UmbrellaSn, req.ChannelNum)
+	resp.Status = 1
+	go EquipmentSrv.UmbrellaIn(r.Packet.Conn.Equipment.Sn, req.UmbrellaSn, req.ChannelNum)
 	return true, nil
 }
 
@@ -52,7 +54,7 @@ func handleUmbrellaOut(r *network.Response, p *network.Packet, l *log.Logger) (b
 		return true, nil
 	}
 	resp := r.Packer.(*network.CmdUmbrellaInRspPkt)
-	resp.Reserved = 1
-	go EquipmentSrv.UmbrellaOut(req.EquipmentSn, req.UmbrellaSn, req.ChannelNum)
+	resp.Status = 1
+	go EquipmentSrv.UmbrellaOut(r.Packet.Conn.Equipment.Sn, req.UmbrellaSn, req.ChannelNum)
 	return true, nil
 }

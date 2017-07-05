@@ -8,15 +8,13 @@ const (
 )
 
 type CmdOpenChannelReqPkt struct{
-	EquipmentSn string
+	//EquipmentSn string
 	ChannelNum uint8
 	//session info
 	SeqId uint32
 }
 
 type CmdOpenChannelRspPkt struct{
-	EquipmentSn string
-	ChannelNum uint8
 	Status uint8
 	//session info
 	SeqId uint32
@@ -33,7 +31,7 @@ func (p *CmdOpenChannelReqPkt) Pack(seqId uint32) ([]byte, error) {
 	w.WriteInt(binary.BigEndian, CMD_CONNECT)
 	w.WriteInt(binary.BigEndian, seqId)
 	p.SeqId = seqId
-	w.WriteFixedSizeString(p.EquipmentSn, 11)
+	//w.WriteFixedSizeString(p.EquipmentSn, 11)
 	w.WriteByte(p.ChannelNum)
 
 	return w.Bytes()
@@ -47,8 +45,8 @@ func (p *CmdOpenChannelReqPkt) Unpack(data []byte) error {
 
 	// Sequence Id
 	r.ReadInt(binary.BigEndian, &p.SeqId)
-	sn := r.ReadCString(11)
-	p.EquipmentSn = string(sn)
+	//sn := r.ReadCString(11)
+	//p.EquipmentSn = string(sn)
 	p.ChannelNum = r.ReadByte()
 
 	return r.Error()
@@ -65,8 +63,6 @@ func (p *CmdOpenChannelRspPkt) Pack(seqId uint32) ([]byte, error) {
 	w.WriteInt(binary.BigEndian, CMD_CONNECT)
 	w.WriteInt(binary.BigEndian, seqId)
 	p.SeqId = seqId
-	w.WriteFixedSizeString(p.EquipmentSn, 11)
-	w.WriteByte(p.ChannelNum)
 	w.WriteByte(p.Status)
 
 	return w.Bytes()
@@ -80,9 +76,6 @@ func (p *CmdOpenChannelRspPkt) Unpack(data []byte) error {
 
 	// Sequence Id
 	r.ReadInt(binary.BigEndian, &p.SeqId)
-	sn := r.ReadCString(11)
-	p.EquipmentSn = string(sn)
-	p.ChannelNum = r.ReadByte()
 	p.Status = r.ReadByte()
 
 	return r.Error()
