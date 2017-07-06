@@ -24,7 +24,7 @@ type CmdUmbrellaOutReqPkt struct{
 }
 
 type CmdUmbrellaOutRspPkt struct{
-	Status uint8
+	Status ResponseStatus
 	SeqId uint32
 }
 

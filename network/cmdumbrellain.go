@@ -7,17 +7,6 @@ const (
 	CmdUmbrellaInRspPktLen uint32 = 12 + 1
 )
 
-type UmbrellaInStatus uint8
-
-const (
-	//成功，可以还伞
-	UmbrellaInStatusSuccess UmbrellaInStatus = iota + 1
-	//过期不能还伞
-	UmbrellaInStatusExpired
-	//非法，无法识别
-	UmbrellaInStatusIllegal
-)
-
 type CmdUmbrellaInReqPkt struct{
 	ChannelNum uint8
 	UmbrellaSn string
@@ -26,7 +15,7 @@ type CmdUmbrellaInReqPkt struct{
 }
 
 type CmdUmbrellaInRspPkt struct{
-	Status uint8
+	Status ResponseStatus
 	SeqId uint32
 }
 

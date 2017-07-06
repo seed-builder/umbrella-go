@@ -9,8 +9,8 @@ import (
 type EquipmentLog struct {
 	gorm.Model
 	Base
-	EquipmentId int
-	SiteId int
+	EquipmentId uint
+	SiteId uint
 	ApiName string
 	Code string
 	Type string

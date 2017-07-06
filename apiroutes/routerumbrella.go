@@ -10,8 +10,4 @@ func LoadUmbrellaRoutes(r gin.IRouter)  {
 		c.String(http.StatusOK, "equipment rest api !")
 	})
 
-	//伞解锁
-	r.POST("/umbrella/:sn/open", func(c *gin.Context) {
-
-	})
 }

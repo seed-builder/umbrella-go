@@ -15,7 +15,7 @@ type Site struct {
 	Address string
 	Longitude string
 	Latitude string
-	Type int
+	Type int32
 }
 
 func NewSite(data map[string]interface{}) *Site  {

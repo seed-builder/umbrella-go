@@ -6,8 +6,8 @@ import (
 )
 
 type Base struct {
-	CreatorId int
-	ModifierId int
+	CreatorId uint
+	ModifierId uint
 	Entity interface{} `gorm:"-"`
 }
 

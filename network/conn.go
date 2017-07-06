@@ -12,6 +12,7 @@ import (
 
 type State uint8
 type Type int8
+type ResponseStatus uint8
 
 const (
 	V10 Type = 0x10
@@ -23,6 +24,22 @@ var (
 )
 
 var noDeadline = time.Time{}
+
+type UmbrellaInStatus uint8
+
+const (
+	RspStatusUnknown ResponseStatus = iota
+	//成功
+	RspStatusSuccess
+	//失败
+	RspStatusFail
+	//伞过期
+	RspStatusUmbrellaExpired
+	//非法伞，无法识别
+	RspStatusUmbrellaIllegal
+	//未登陆授权
+	RspStatusUnauth
+)
 
 // Conn States
 const (
