@@ -8,12 +8,10 @@ const (
 )
 
 type CmdTerminateReqPkt struct{
-	EquipmentSn string
 	SeqId uint32
 }
 
 type CmdTerminateRspPkt struct{
-	EquipmentSn string
 	SeqId uint32
 }
 
@@ -28,7 +26,6 @@ func (p *CmdTerminateReqPkt) Pack(seqId uint32) ([]byte, error) {
 	w.WriteInt(binary.BigEndian, CMD_TERMINATE)
 	w.WriteInt(binary.BigEndian, seqId)
 	p.SeqId = seqId
-	w.WriteFixedSizeString(p.EquipmentSn, 11)
 
 	return w.Bytes()
 }
@@ -41,8 +38,6 @@ func (p *CmdTerminateReqPkt) Unpack(data []byte) error {
 
 	// Sequence Id
 	r.ReadInt(binary.BigEndian, &p.SeqId)
-	sn := r.ReadCString(11)
-	p.EquipmentSn = string(sn)
 	return r.Error()
 }
 
@@ -57,7 +52,6 @@ func (p *CmdTerminateRspPkt) Pack(seqId uint32) ([]byte, error) {
 	w.WriteInt(binary.BigEndian, CMD_TERMINATE_RESP)
 	w.WriteInt(binary.BigEndian, seqId)
 	p.SeqId = seqId
-	w.WriteFixedSizeString(p.EquipmentSn, 11)
 
 	return w.Bytes()
 }
@@ -70,7 +64,5 @@ func (p *CmdTerminateRspPkt) Unpack(data []byte) error {
 
 	// Sequence Id
 	r.ReadInt(binary.BigEndian, &p.SeqId)
-	sn := r.ReadCString(11)
-	p.EquipmentSn = string(sn)
 	return r.Error()
 }

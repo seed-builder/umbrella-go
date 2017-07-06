@@ -42,10 +42,9 @@ func (es *EquipmentService) ListenAndServe(addr string, ver  network.Type, t tim
 	}
 	server := &network.TcpServer{Addr: addr, Handler: handler, Typ: ver,
 		T: t, N: n,
-		ErrorLog: log.New(logWriter, "cmd server: ", log.LstdFlags)}
+		ErrorLog: log.New(logWriter, "equipment server: ", log.LstdFlags)}
 	return server.ListenAndServe()
 }
-
 
 func (es *EquipmentService) RegisterConn(equipmentSn string, conn *network.Conn)  {
 	es.EquipmentConns[equipmentSn] = conn

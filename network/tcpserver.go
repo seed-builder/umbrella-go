@@ -220,7 +220,7 @@ func (c *conn) close() {
 
 	err := c.Conn.SendPkt(p, <-c.Conn.SeqId)
 	if err != nil {
-		c.server.ErrorLog.Printf("send cmpp terminate request packet to %v error: %v\n", c.Conn.RemoteAddr(), err)
+		c.server.ErrorLog.Printf("send cmd terminate request packet to %v error: %v\n", c.Conn.RemoteAddr(), err)
 	}
 
 	close(c.done)
@@ -259,7 +259,7 @@ func startActiveTest(c *conn) {
 			case <-t.C:
 				// check whether c.counter exceeds
 				if atomic.LoadInt32(&c.counter) >= c.n {
-					c.server.ErrorLog.Printf("no cmd active test response returned from %v for %d times!",
+					c.server.ErrorLog.Printf("no client active test response returned from %v for %d times!",
 						c.Conn.RemoteAddr(), c.n)
 					exceed <- struct{}{}
 					break
