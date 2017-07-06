@@ -1,0 +1,9 @@
+http_port: 4000
+tcp_port: 7777
+debug: true
+db_dialect: mysql
+db_server: 127.0.0.1:3306
+db_user: root
+db_password:
+db_database: umbrella
+salt: sfadfasdf

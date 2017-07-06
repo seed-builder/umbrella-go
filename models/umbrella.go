@@ -2,11 +2,9 @@ package models
 
 import(
 	"github.com/jinzhu/gorm"
-	//"umbrella/utilities"
 	"github.com/mitchellh/mapstructure"
-	"umbrella/network"
 	"time"
-	"glass/models"
+	"umbrella/utilities"
 )
 
 // 1-未发放 2-待借中 3-借出中 4-失效（超过还伞时间） 5-异常
@@ -51,13 +49,13 @@ func (m *Umbrella) BeforeDelete() (err error) {
 }
 
 //InEquipment 进入设备, 还伞
-func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8)  network.ResponseStatus {
+func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8)  uint8 {
 	m.Query().First(m, "sn = ?", umbrellaSn)
 	if m.ID == 0 {
-		return network.RspStatusUmbrellaIllegal
+		return utilities.RspStatusUmbrellaIllegal
 	}
 	if m.Status == UmbrellaStatusExpired {
-		return network.RspStatusUmbrellaExpired
+		return utilities.RspStatusUmbrellaExpired
 	}
 	m.Entity = m
 	m.EquipmentId = equipment.ID
@@ -88,17 +86,17 @@ func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelN
 
 	if m.Status == UmbrellaStatusIn {
 		equipment.InChannel(channelNum)
-		return network.RspStatusSuccess
+		return utilities.RspStatusSuccess
 	}else{
-		return network.RspStatusUmbrellaExpired
+		return utilities.RspStatusUmbrellaExpired
 	}
 }
 
 //OutEquipment 出设备
-func (m *Umbrella) OutEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8) network.ResponseStatus {
+func (m *Umbrella) OutEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8) uint8 {
 	m.Query().First(m, "sn = ?", umbrellaSn)
 	if m.ID == 0 {
-		return network.RspStatusUmbrellaIllegal
+		return utilities.RspStatusUmbrellaIllegal
 	}
 	m.Entity = m
 	m.Status = UmbrellaStatusOut
@@ -115,5 +113,5 @@ func (m *Umbrella) OutEquipment(equipment *Equipment, umbrellaSn string, channel
 		hire.Status = UmbrellaHireStatusNormal
 		hire.Save()
 	}
-	return network.RspStatusSuccess
+	return utilities.RspStatusSuccess
 }

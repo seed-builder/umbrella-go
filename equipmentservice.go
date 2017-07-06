@@ -1,13 +1,11 @@
-package services
+package umbrella
 
 import (
-	"umbrella/models"
 	"time"
 	"io"
 	"log"
 	"os"
 	"umbrella/network"
-	"github.com/kardianos/govendor/context"
 	"errors"
 )
 

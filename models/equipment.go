@@ -2,7 +2,6 @@ package models
 
 import (
 	"github.com/jinzhu/gorm"
-	//"umbrella/utilities"
 	"github.com/mitchellh/mapstructure"
 )
 

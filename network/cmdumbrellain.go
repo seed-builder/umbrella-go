@@ -1,6 +1,8 @@
 package network
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+)
 
 const (
 	CmdUmbrellaInReqPktLen uint32 = 12 + 11 + 1 + 11
@@ -15,7 +17,7 @@ type CmdUmbrellaInReqPkt struct{
 }
 
 type CmdUmbrellaInRspPkt struct{
-	Status ResponseStatus
+	Status uint8
 	SeqId uint32
 }
 

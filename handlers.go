@@ -1,4 +1,4 @@
-package services
+package umbrella
 
 import (
 	"umbrella/network"
@@ -6,7 +6,7 @@ import (
 	"umbrella/models"
 )
 
-func handleConnect(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
+func HandleConnect(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
 	req, ok := p.Packer.(*network.CmdConnectReqPkt)
 	if !ok {
 		// not a connect request, ignore it,
@@ -32,7 +32,7 @@ func handleConnect(r *network.Response, p *network.Packet, l *log.Logger) (bool,
 }
 
 //handleUmbrellaIn: umbrella in channel request
-func handleUmbrellaIn(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
+func HandleUmbrellaIn(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
 	req, ok := p.Packer.(*network.CmdUmbrellaInReqPkt)
 	if !ok {
 		// not a connect request, ignore it,
@@ -46,7 +46,7 @@ func handleUmbrellaIn(r *network.Response, p *network.Packet, l *log.Logger) (bo
 }
 
 //handleUmbrellaOut: umbrella out channel request
-func handleUmbrellaOut(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
+func HandleUmbrellaOut(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
 	req, ok := p.Packer.(*network.CmdUmbrellaOutReqPkt)
 	if !ok {
 		// not a connect request, ignore it,

@@ -1,20 +1,13 @@
 package network
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+)
 
 const (
 	CmdUmbrellaOutReqPktLen uint32 = 12 + 11 + 1 + 11
 	CmdUmbrellaOutRspPktLen uint32 = 12 + 1
 )
-
-type UmbrellaOutStatus uint8
-
-const (
-	//成功记录借伞
-	UmbrellaOutStatusSuccess UmbrellaOutStatus = iota + 1
-	UmbrellaOutStatusFail
-)
-
 
 type CmdUmbrellaOutReqPkt struct{
 	ChannelNum uint8
@@ -24,7 +17,7 @@ type CmdUmbrellaOutReqPkt struct{
 }
 
 type CmdUmbrellaOutRspPkt struct{
-	Status ResponseStatus
+	Status uint8
 	SeqId uint32
 }
 
