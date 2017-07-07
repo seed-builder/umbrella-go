@@ -1,5 +1,7 @@
 http_port: 4000
 tcp_port: 7777
+tcp_test_timeout: 180
+tcp_test_max: 3
 debug: true
 db_dialect: mysql
 db_server: 127.0.0.1:3306

@@ -21,6 +21,7 @@ var ErrMethodParamsInvalid = errors.New("params passed to method is invalid")
 var ErrTotalLengthInvalid = errors.New("total_length in Packet data is invalid")
 var ErrCommandIdInvalid = errors.New("command_Id in Packet data is invalid")
 var ErrCommandIdNotSupported = errors.New("command_Id in Packet data is not supported")
+var ErrConnNeedAuth = errors.New("illegal, need auth")
 
 
 type CommandId uint32

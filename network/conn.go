@@ -88,6 +88,7 @@ func (c *Conn) Close() {
 		if c.State == CONN_CLOSED {
 			return
 		}
+		c.Equipment.Offline()
 		close(c.done)  // let the SeqId goroutine exit.
 		c.Conn.Close() // close the underlying net.Conn
 		c.State = CONN_CLOSED

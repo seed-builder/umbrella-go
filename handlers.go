@@ -19,8 +19,8 @@ func HandleConnect(r *network.Response, p *network.Packet, l *log.Logger) (bool,
 		eq := models.Equipment{}
 		eq.Query().First(&eq, "sn = ?", req.EquipmentSn)
 		if eq.ID > 0 {
-			go eq.InitChannel()
-			go eq.Online()
+			eq.InitChannel()
+			eq.Online()
 			r.Packet.Conn.SetState( network.CONN_AUTHOK )
 			r.Packet.Conn.SetEquipment(&eq)
 			EquipmentSrv.RegisterConn(req.EquipmentSn, r.Packet.Conn)
@@ -42,6 +42,9 @@ func HandleUmbrellaIn(r *network.Response, p *network.Packet, l *log.Logger) (bo
 		// go on to next handler
 		return true, nil
 	}
+	if r.Packet.Conn.State != network.CONN_AUTHOK {
+		return false, network.ErrConnNeedAuth
+	}
 	l.Printf("handle the umbrella in request , %v", req)
 	resp := r.Packer.(*network.CmdUmbrellaInRspPkt)
 	umbrella := models.Umbrella{}
@@ -56,6 +59,9 @@ func HandleUmbrellaOut(r *network.Response, p *network.Packet, l *log.Logger) (b
 		// not a connect request, ignore it,
 		// go on to next handler
 		return true, nil
+	}
+	if r.Packet.Conn.State != network.CONN_AUTHOK {
+		return false, network.ErrConnNeedAuth
 	}
 	l.Printf("handle the umbrella out request , %v", req)
 	resp := r.Packer.(*network.CmdUmbrellaOutRspPkt)

@@ -9,6 +9,8 @@ import (
 type Config struct {
 	HttpPort string `yaml:"http_port"`
 	TcpPort string `yaml:"tcp_port"`
+	TcpTestTimeout int32 `yaml:"tcp_test_timeout"`
+	TcpTestMax int32 `yaml:"tcp_test_max"`
 	Debug bool `yaml:"debug"`
 	DbDialect string `yaml:"db_dialect"`
 	DbServer string `yaml:"db_server"`

@@ -62,8 +62,15 @@ func (es *EquipmentService) OpenChannel(equipmentSn string) (bool, error) {
 		} else {
 			return true , nil
 		}
-	}else{
+	} else{
 		return false, errors.New("equipment is offline")
+	}
+}
+
+func (es *EquipmentService) Close(){
+	for sn, conn := range es.EquipmentConns {
+		conn.Close()
+		log.Println("close conn sn: ", sn)
 	}
 }
 
