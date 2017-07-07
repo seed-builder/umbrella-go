@@ -24,8 +24,10 @@ func HandleConnect(r *network.Response, p *network.Packet, l *log.Logger) (bool,
 			r.Packet.Conn.SetEquipment(&eq)
 			EquipmentSrv.RegisterConn(req.EquipmentSn, r.Packet.Conn)
 			resp.Status = network.ConnectSuccess
+			l.Printf("connect success, sn: %s", req.EquipmentSn)
 		}else{
 			resp.Status = network.ConnectWrongSn
+			l.Printf("connect fail, sn: %s", req.EquipmentSn)
 		}
 	}
 	return true, nil
@@ -39,7 +41,8 @@ func HandleUmbrellaIn(r *network.Response, p *network.Packet, l *log.Logger) (bo
 		// go on to next handler
 		return true, nil
 	}
-	resp := r.Packer.(*network.CmdUmbrellaOutRspPkt)
+	l.Printf("handle the umbrella in request , %v", req)
+	resp := r.Packer.(*network.CmdUmbrellaInRspPkt)
 	umbrella := models.Umbrella{}
 	resp.Status = umbrella.InEquipment(r.Packet.Conn.Equipment, req.UmbrellaSn, req.ChannelNum)
 	return true, nil
@@ -53,7 +56,8 @@ func HandleUmbrellaOut(r *network.Response, p *network.Packet, l *log.Logger) (b
 		// go on to next handler
 		return true, nil
 	}
-	resp := r.Packer.(*network.CmdUmbrellaInRspPkt)
+	l.Printf("handle the umbrella out request , %v", req)
+	resp := r.Packer.(*network.CmdUmbrellaOutRspPkt)
 	umbrella := models.Umbrella{}
 	resp.Status = umbrella.OutEquipment(r.Packet.Conn.Equipment, req.UmbrellaSn, req.ChannelNum)
 	return true, nil

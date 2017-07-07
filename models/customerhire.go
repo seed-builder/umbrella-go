@@ -3,6 +3,7 @@ package models
 import (
 	"github.com/jinzhu/gorm"
 	"time"
+	"umbrella/utilities"
 )
 
 //(1-租借中, 2-待支付租金 3-已完成, 4-逾期未归还 )
@@ -37,4 +38,8 @@ type CustomerHire struct {
 
 func (CustomerHire) TableName() string {
 	return "customer_hires"
+}
+
+func (m *CustomerHire) Query() *gorm.DB{
+	return utilities.MyDB.Model(&CustomerHire{})
 }

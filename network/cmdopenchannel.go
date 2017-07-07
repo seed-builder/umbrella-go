@@ -3,8 +3,8 @@ package network
 import "encoding/binary"
 
 const (
-	CmdOpenChannelReqPktLen uint32 = 12 + 11 + 1
-	CmdOpenChannelRspPktLen uint32 = 12 + 11 + 1 + 1
+	CmdOpenChannelReqPktLen uint32 = 12 + 1
+	CmdOpenChannelRspPktLen uint32 = 12 + 1
 )
 
 type CmdOpenChannelReqPkt struct{
@@ -28,7 +28,7 @@ func (p *CmdOpenChannelReqPkt) Pack(seqId uint32) ([]byte, error) {
 
 	// Pack header
 	w.WriteInt(binary.BigEndian, pktLen)
-	w.WriteInt(binary.BigEndian, CMD_CONNECT)
+	w.WriteInt(binary.BigEndian, CMD_OPEN_CHANNEL)
 	w.WriteInt(binary.BigEndian, seqId)
 	p.SeqId = seqId
 	//w.WriteFixedSizeString(p.EquipmentSn, 11)
@@ -60,7 +60,7 @@ func (p *CmdOpenChannelRspPkt) Pack(seqId uint32) ([]byte, error) {
 
 	// Pack header
 	w.WriteInt(binary.BigEndian, pktLen)
-	w.WriteInt(binary.BigEndian, CMD_CONNECT)
+	w.WriteInt(binary.BigEndian, CMD_OPEN_CHANNEL_RESP)
 	w.WriteInt(binary.BigEndian, seqId)
 	p.SeqId = seqId
 	w.WriteByte(p.Status)

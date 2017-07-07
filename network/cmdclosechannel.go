@@ -3,22 +3,19 @@ package network
 import "encoding/binary"
 
 const(
-	CmdCloseChannelPktLen uint32 = 12 + 11 + 1
-	CmdCloseChannelRspPktlLen uint32 = 12 + 11 + 1 + 1
+	CmdCloseChannelPktLen uint32 = 12 + 1
+	CmdCloseChannelRspPktlLen uint32 = 12 + 1
 )
 
 
 type CmdCloseChannelReqPkt struct{
-	EquipmentSn string
 	ChannelNum uint8
 	// session info
 	SeqId uint32
 }
 
 type CmdCloseChannelRspPkt struct{
-	EquipmentSn string
-	ChannelNum uint8
-	Result uint8
+	Status uint8
 	// session info
 	SeqId uint32
 }
@@ -47,8 +44,6 @@ func (p *CmdCloseChannelReqPkt) Unpack(data []byte) error {
 
 	// Sequence Id
 	r.ReadInt(binary.BigEndian, &p.SeqId)
- 	EquipmentSn := r.ReadCString(11)
-	p.EquipmentSn = string(EquipmentSn)
 	p.ChannelNum = r.ReadByte()
 	return r.Error()
 }
@@ -64,7 +59,7 @@ func (p *CmdCloseChannelRspPkt) Pack(seqId uint32) ([]byte, error) {
 	w.WriteInt(binary.BigEndian, pktLen)
 	w.WriteInt(binary.BigEndian, CMD_CLOSE_CHANNEL_RESP)
 	w.WriteInt(binary.BigEndian, seqId)
-	w.WriteByte(p.Result)
+	w.WriteByte(p.Status)
 	p.SeqId = seqId
 
 	return w.Bytes()
@@ -78,10 +73,7 @@ func (p *CmdCloseChannelRspPkt) Unpack(data []byte) error {
 
 	// Sequence Id
 	r.ReadInt(binary.BigEndian, &p.SeqId)
-	EquipmentSn := r.ReadCString(11)
-	p.EquipmentSn = string(EquipmentSn)
-	p.ChannelNum = r.ReadByte()
-	p.Result = r.ReadByte()
+	p.Status = r.ReadByte()
 
 	return r.Error()
 }

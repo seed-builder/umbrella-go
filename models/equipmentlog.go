@@ -2,7 +2,7 @@ package models
 
 import (
 	"github.com/jinzhu/gorm"
-	//"umbrella/utilities"
+	"umbrella/utilities"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -29,11 +29,13 @@ func (EquipmentLog) TableName() string {
 }
 
 func (m *EquipmentLog) BeforeSave() (err error) {
-	m.Entity = m
 	return nil
 }
 
 func (m *EquipmentLog) BeforeDelete() (err error) {
-	m.Entity = m
 	return nil
+}
+
+func (m *EquipmentLog) Query() *gorm.DB{
+	return utilities.MyDB.Model(&EquipmentLog{})
 }

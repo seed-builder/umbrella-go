@@ -3,6 +3,7 @@ package models
 import (
 	"github.com/jinzhu/gorm"
 	"github.com/mitchellh/mapstructure"
+	"umbrella/utilities"
 )
 
 type Equipment struct {
@@ -37,6 +38,10 @@ func (m *Equipment) BeforeSave() (err error) {
 
 func (m *Equipment) BeforeDelete() (err error) {
 	return nil
+}
+
+func (m *Equipment) Query() *gorm.DB{
+	return utilities.MyDB.Model(&Equipment{})
 }
 
 func (m *Equipment) InitChannel() {

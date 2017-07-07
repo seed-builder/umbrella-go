@@ -48,6 +48,10 @@ func (m *Umbrella) BeforeDelete() (err error) {
 	return nil
 }
 
+func (m *Umbrella) Query() *gorm.DB{
+	return utilities.MyDB.Model(&Umbrella{})
+}
+
 //InEquipment 进入设备, 还伞
 func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8)  uint8 {
 	m.Query().First(m, "sn = ?", umbrellaSn)

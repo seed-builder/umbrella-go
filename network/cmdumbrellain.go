@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	CmdUmbrellaInReqPktLen uint32 = 12 + 11 + 1 + 11
+	CmdUmbrellaInReqPktLen uint32 = 12 + 11 + 1
 	CmdUmbrellaInRspPktLen uint32 = 12 + 1
 )
 
@@ -29,7 +29,7 @@ func (p *CmdUmbrellaInReqPkt) Pack(seqId uint32) ([]byte, error) {
 
 	// Pack header
 	w.WriteInt(binary.BigEndian, pktLen)
-	w.WriteInt(binary.BigEndian, CMD_CONNECT)
+	w.WriteInt(binary.BigEndian, CMD_UMBRELLA_IN)
 	w.WriteInt(binary.BigEndian, seqId)
 	p.SeqId = seqId
 	//w.WriteFixedSizeString(p.EquipmentSn, 11)
@@ -65,7 +65,7 @@ func (p *CmdUmbrellaInRspPkt) Pack(seqId uint32) ([]byte, error) {
 
 	// Pack header
 	w.WriteInt(binary.BigEndian, pktLen)
-	w.WriteInt(binary.BigEndian, CMD_CONNECT)
+	w.WriteInt(binary.BigEndian, CMD_UMBRELLA_IN_RESP)
 	w.WriteInt(binary.BigEndian, seqId)
 	p.SeqId = seqId
 	w.WriteByte(p.Status)

@@ -3,6 +3,7 @@ package models
 import (
 	"github.com/jinzhu/gorm"
 	"time"
+	"umbrella/utilities"
 )
 
 type Customer struct {
@@ -25,4 +26,8 @@ type Customer struct {
 
 func (Customer) TableName() string {
 	return "customers"
+}
+
+func (m *Customer) Query() *gorm.DB{
+	return utilities.MyDB.Model(&Customer{})
 }

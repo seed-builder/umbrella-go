@@ -40,7 +40,7 @@ func (c *conn) serve() {
 	defer c.close()
 
 	// start a goroutine for sending active test.
-	startActiveTest(c)
+	//startActiveTest(c)
 
 	for {
 		select {
@@ -164,7 +164,7 @@ func (c *conn) readPacket() (*Response, error) {
 			},
 			SeqId: p.SeqId,
 		}
-		c.server.ErrorLog.Printf("receive a cmpp active request from %v[%d]\n",
+		c.server.ErrorLog.Printf("receive a cmd active request from %v[%d]\n",
 			c.Conn.RemoteAddr(), p.SeqId)
 
 	case *CmdActiveTestRspPkt:
@@ -176,7 +176,7 @@ func (c *conn) readPacket() (*Response, error) {
 		rsp = &Response{
 			Packet: pkt,
 		}
-		c.server.ErrorLog.Printf("receive a cmpp active response from %v[%d]\n",
+		c.server.ErrorLog.Printf("receive a cmd active response from %v[%d]\n",
 			c.Conn.RemoteAddr(), p.SeqId)
 
 	case *CmdTerminateReqPkt:

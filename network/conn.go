@@ -8,6 +8,7 @@ import (
 	"io"
 	"sync"
 	"umbrella/models"
+	"log"
 )
 
 type State uint8
@@ -175,6 +176,8 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 		return nil, ErrCommandIdInvalid
 	}
 
+	log.Println("receive data total len: ", rb.totalLen, " command id : ", rb.commandId)
+
 	// The left packet data (start from seqId in header).
 	var leftData = rb.leftData[0:(rb.totalLen - 8)]
 	_, err = io.ReadFull(c.Conn, leftData)
@@ -218,5 +221,6 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("received packer: %v", p)
 	return p, nil
 }

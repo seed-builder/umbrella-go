@@ -3,6 +3,7 @@ package models
 import (
 	"github.com/jinzhu/gorm"
 	"github.com/mitchellh/mapstructure"
+	"umbrella/utilities"
 )
 
 type Site struct {
@@ -35,4 +36,8 @@ func (m *Site) BeforeSave() (err error) {
 
 func (m *Site) BeforeDelete() (err error) {
 	return nil
+}
+
+func (m *Site) Query() *gorm.DB{
+	return utilities.MyDB.Model(&Site{})
 }
