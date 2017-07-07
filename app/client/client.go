@@ -13,26 +13,26 @@ const (
 )
 
 var umbrellaSns = []string{
-	"S200402zhjd",
-	"S197709awfg",
-	"S199803lfta",
-	"S200907qczp",
-	"S200608qjri",
-	"S200601lmkz",
-	"S197206spup",
-	"S199409grcr",
-	"S201601puei",
-	"S200007xrqi",
-	"S200805xieh",
-	"S197811pjxy",
-	"S201608dtix",
-	"S198607qpkz",
-	"S198804gcdw",
-	"S199601jvsg",
-	"S199501rohv",
-	"S197712rjlw",
-	"S197608pgww",
-	"S199811wpvw",
+	"S125947",
+	"S232774",
+	"S037362",
+	"S540212",
+	"S107023",
+	"S580560",
+	"S066311",
+	"S180633",
+	"S661043",
+	"S975045",
+	"S937311",
+	"S005841",
+	"S592082",
+	"S079349",
+	"S427389",
+	"S371046",
+	"S897755",
+	"S328415",
+	"S415496",
+	"S232893",
 }
 
 func startAClient(idx int, sn string) {
@@ -53,7 +53,7 @@ func startAClient(idx int, sn string) {
 		case <-t.C:
 
 			p :=  &network.CmdUmbrellaInReqPkt{}
-			p.ChannelNum = 1
+			p.ChannelNum = uint8(rand.Intn(10))
 			var i = rand.Intn(19)
 			p.UmbrellaSn = umbrellaSns[i]
 			err = c.SendReqPkt(p)
@@ -87,7 +87,7 @@ func startAClient(idx int, sn string) {
 				log.Printf("client %d: send network active response error: %s.", idx, err)
 				break
 			}else{
-				log.Printf("client %d: send network active response success: %s.", idx, err)
+				log.Printf("client %d: send network active response success.", idx)
 			}
 		case *network.CmdActiveTestRspPkt:
 			log.Printf("client %d: receive a network activetest response: %v.", idx, p)
@@ -101,9 +101,9 @@ func startAClient(idx int, sn string) {
 				break
 			}
 		case *network.CmdTerminateRspPkt:
-			log.Printf("client %d: receive a network terminate response: %v.", p)
+			log.Printf("client %d: receive a network terminate response: %v.", idx,p)
 		case *network.CmdUmbrellaInRspPkt:
-			log.Printf("client %d: receive a network umbrella in response: %v.", p)
+			log.Printf("client %d: receive a network umbrella in response: %v.", idx, p)
 		}
 	}
 }

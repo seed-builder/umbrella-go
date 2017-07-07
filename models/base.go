@@ -24,3 +24,7 @@ func (m *Base) Remove() error{
 	utilities.MyDB.Delete(m.Entity)
 	return nil
 }
+
+func (m *Base) Update(properties map[string]interface{}){
+	utilities.MyDB.Model(m.Entity).Updates(properties)
+}

@@ -19,7 +19,8 @@ func HandleConnect(r *network.Response, p *network.Packet, l *log.Logger) (bool,
 		eq := models.Equipment{}
 		eq.Query().First(&eq, "sn = ?", req.EquipmentSn)
 		if eq.ID > 0 {
-			eq.InitChannel()
+			go eq.InitChannel()
+			go eq.Online()
 			r.Packet.Conn.SetState( network.CONN_AUTHOK )
 			r.Packet.Conn.SetEquipment(&eq)
 			EquipmentSrv.RegisterConn(req.EquipmentSn, r.Packet.Conn)

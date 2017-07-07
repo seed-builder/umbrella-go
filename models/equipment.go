@@ -6,6 +6,14 @@ import (
 	"umbrella/utilities"
 )
 
+const (
+	EquipmentStatusNone int32 = iota + 1
+	EquipmentStatusUse
+	EquipmentStatusOnline
+	EquipmentStatusOffline
+	EquipmentStatusBug
+)
+
 type Equipment struct {
 	gorm.Model
 	Base
@@ -74,4 +82,15 @@ func (m *Equipment) InChannel(channelNum uint8){
 func (m *Equipment) OutChannel(channelNum uint8){
 	n := m.ChannelCache[channelNum]
 	m.ChannelCache[channelNum] = n - 1
+}
+
+
+func (m *Equipment) Online(){
+	m.Status = EquipmentStatusOnline
+	utilities.MyDB.Model(m).Update("status", m.Status)
+}
+
+func (m *Equipment) Offline(){
+	m.Status = EquipmentStatusOffline
+	utilities.MyDB.Model(m).Update("status", m.Status)
 }

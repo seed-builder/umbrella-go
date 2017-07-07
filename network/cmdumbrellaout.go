@@ -5,12 +5,13 @@ import (
 )
 
 const (
-	CmdUmbrellaOutReqPktLen uint32 = 12 + 11 + 1
+	CmdUmbrellaOutReqPktLen uint32 = 12 + 7 + 1
 	CmdUmbrellaOutRspPktLen uint32 = 12 + 1
 )
 
 type CmdUmbrellaOutReqPkt struct{
 	ChannelNum uint8
+	//7字节
 	UmbrellaSn string
 
 	SeqId uint32
@@ -34,7 +35,7 @@ func (p *CmdUmbrellaOutReqPkt) Pack(seqId uint32) ([]byte, error) {
 	p.SeqId = seqId
 	//w.WriteFixedSizeString(p.EquipmentSn, 11)
 	w.WriteByte(p.ChannelNum)
-	w.WriteFixedSizeString(p.UmbrellaSn, 11)
+	w.WriteFixedSizeString(p.UmbrellaSn, UmbrellaSnLen)
 
 	return w.Bytes()
 }
@@ -50,7 +51,7 @@ func (p *CmdUmbrellaOutReqPkt) Unpack(data []byte) error {
 	//sn := r.ReadCString(11)
 	//p.EquipmentSn = string(sn)
 	p.ChannelNum = r.ReadByte()
-	usn := r.ReadCString(11)
+	usn := r.ReadCString(UmbrellaSnLen)
 	p.UmbrellaSn = string(usn)
 
 	return r.Error()

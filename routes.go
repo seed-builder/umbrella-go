@@ -12,7 +12,12 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 	r.POST("/equipment/:sn/open-channel", func(c *gin.Context) {
 		sn :=  c.Param("sn")
 		success, err := EquipmentSrv.OpenChannel(sn)
-		c.JSON(http.StatusOK, gin.H{"success": success, "err": err.Error() })
+		if err == nil {
+			c.JSON(http.StatusOK, gin.H{"success": success, "err": "" })
+		}else{
+			c.JSON(http.StatusOK, gin.H{"success": success, "err": err.Error() })
+		}
+
 	})
 }
 
