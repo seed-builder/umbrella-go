@@ -40,7 +40,7 @@ func (c *conn) serve() {
 	defer c.close()
 
 	// start a goroutine for sending active test.
-	//startActiveTest(c)
+	startActiveTest(c)
 
 	for {
 		select {
