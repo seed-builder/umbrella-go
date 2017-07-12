@@ -6,9 +6,11 @@ import (
 	"umbrella/utilities"
 )
 
-//(1-租借中, 2-待支付租金 3-已完成, 4-逾期未归还 )
+//(1-初始，2-未拿伞租借失败，3-租借中, 4-还伞完毕，待支付租金 5-已完成, 6-逾期未归还)
 const(
 	UmbrellaHireStatusUnknown int32 = iota
+	UmbrellaHireStatusInit
+	UmbrellaHireStatusFail
 	UmbrellaHireStatusNormal
 	UmbrellaHireStatusPaying
 	UmbrellaHireStatusCompleted
@@ -32,6 +34,9 @@ type CustomerHire struct {
 	HireDay int32
 	HireAmt float64
 	Status int32
+
+	HireEquipment Equipment `gorm:"ForeignKey:HireEquipmentId"`
+	ReturnEquipment Equipment `gorm:"ForeignKey:ReturnEquipmentId"`
 
 }
 

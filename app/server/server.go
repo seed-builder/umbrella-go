@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"syscall"
 	"sync"
+	"github.com/beego/bee/testdata/router"
 )
 
 var wg sync.WaitGroup
@@ -48,26 +49,29 @@ func restApi()  {
 	defer wg.Done()
 
 	log.Println("rest api service begin...")
-	router := gin.Default()
-
+	r := gin.Default()
+	r.Use(cors())
 	// This handler will match /user/john but will not match neither /user/ or /user
-	router.GET("/", func(c *gin.Context) {
+	r.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "Hello world!" )
 	})
-	umbrella.LoadEquipmentRoutes(router)
-	umbrella.LoadUmbrellaRoutes(router)
-	router.Run(":" + utilities.SysConfig.HttpPort)
+	umbrella.LoadEquipmentRoutes(r)
+	umbrella.LoadUmbrellaRoutes(r)
+	umbrella.LoadCustomerHireRoutes(r)
+	r.Run(":" + utilities.SysConfig.HttpPort)
 	log.Println("restApi return ")
+}
+
+func cors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Next()
+	}
 }
 
 func equipmentSrv(){
 	defer wg.Done()
 
-	var handlers = []network.Handler{
-		network.HandlerFunc(umbrella.HandleConnect),
-		network.HandlerFunc(umbrella.HandleUmbrellaIn),
-		network.HandlerFunc(umbrella.HandleUmbrellaOut),
-	}
 	addr := ":" + utilities.SysConfig.TcpPort
 	duration := time.Duration(utilities.SysConfig.TcpTestTimeout)* time.Second
 	err := umbrella.EquipmentSrv.ListenAndServe(
@@ -76,7 +80,6 @@ func equipmentSrv(){
 		duration,
 		utilities.SysConfig.TcpTestMax,
 		nil,
-		handlers...,
 	)
 	if err != nil {
 		log.Println("equipment ListenAndServ error:", err)

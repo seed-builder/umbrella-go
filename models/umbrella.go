@@ -97,7 +97,7 @@ func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelN
 }
 
 //OutEquipment 出设备
-func (m *Umbrella) OutEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8) uint8 {
+func (m *Umbrella) OutEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8, hire_id uint) uint8 {
 	m.Query().First(m, "sn = ?", umbrellaSn)
 	if m.ID == 0 {
 		return utilities.RspStatusUmbrellaIllegal
@@ -109,11 +109,12 @@ func (m *Umbrella) OutEquipment(equipment *Equipment, umbrellaSn string, channel
 
 	hire := CustomerHire{}
 	hire.Entity = &hire
-	hire.Query().First(&hire, "umbrella_id = ? and status=1", m.ID)
+	hire.Query().First(&hire, hire_id)
 	if hire.ID > 0 {
 		hire.HireAt = time.Now()
-		hire.HireEquipmentId = equipment.ID
-		hire.HireSiteId = equipment.SiteId
+		hire.UmbrellaId = m.ID
+		//hire.HireEquipmentId = equipment.ID
+		//hire.HireSiteId = equipment.SiteId
 		hire.Status = UmbrellaHireStatusNormal
 		hire.Save()
 	}

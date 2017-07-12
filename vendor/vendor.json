@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "+YBVO6LI+Rblq8aBd/TSyuqXAkw=",
+			"path": "github.com/garyburd/redigo/redis",
+			"revision": "95d11dba2d44531bdb8022752b98912baafae03a",
+			"revisionTime": "2017-05-31T16:47:38Z"
+		},
+		{
 			"checksumSHA1": "GZ3aucF6aX6k1sAlzkbuk/Xa37k=",
 			"path": "github.com/gin-gonic/gin",
 			"revision": "d5b353c5d5a560322e6d96121c814115562501f7",
