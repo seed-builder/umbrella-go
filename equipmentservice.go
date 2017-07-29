@@ -157,14 +157,14 @@ func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Pac
 
 //HandleOpenChannelRsp
 func (es *EquipmentService) HandleOpenChannelRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error) {
-	req, ok := p.Packer.(*network.CmdOpenChannelRspPkt)
+	_, ok := p.Packer.(*network.CmdOpenChannelRspPkt)
 	if !ok {
 		// not a connect request, ignore it,
 		// go on to next handler
 		return true, nil
 	}
 
-
+	return true, nil
 }
 
 //handleUmbrellaOut: umbrella out channel request

@@ -24,10 +24,10 @@ var ErrCommandIdNotSupported = errors.New("command_Id in Packet data is not supp
 var ErrConnNeedAuth = errors.New("illegal, need auth")
 
 
-type CommandId uint32
+type CommandId byte
 
 const (
-	CMD_REQUEST_MIN, CMD_RESPONSE_MIN CommandId = iota, 0x80000000 + iota
+	CMD_REQUEST_MIN, CMD_RESPONSE_MIN CommandId = iota, 0x80 + iota
 	CMD_CONNECT, CMD_CONNECT_RESP
 	CMD_TERMINATE, CMD_TERMINATE_RESP
 	_, _
@@ -40,7 +40,7 @@ const (
 )
 
 type Packer interface {
-	Pack(seqId uint32) ([]byte, error)
+	Pack(seqId uint8) ([]byte, error)
 	Unpack(data []byte) error
 }
 

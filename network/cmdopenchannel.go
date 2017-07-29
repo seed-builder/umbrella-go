@@ -1,35 +1,33 @@
 package network
 
-import "encoding/binary"
-
 const (
-	CmdOpenChannelReqPktLen uint32 = 12 + 1
-	CmdOpenChannelRspPktLen uint32 = 12 + 1
+	CmdOpenChannelReqPktLen uint32 = 4 + 1
+	CmdOpenChannelRspPktLen uint32 = 4 + 1
 )
 
 type CmdOpenChannelReqPkt struct{
 	//EquipmentSn string
 	ChannelNum uint8
 	//session info
-	SeqId uint32
+	SeqId uint8
 }
 
 type CmdOpenChannelRspPkt struct{
 	Status uint8
 	//session info
-	SeqId uint32
+	SeqId uint8
 }
 
 // Pack packs the CmdActiveTestReqPkt to bytes stream for client side.
-func (p *CmdOpenChannelReqPkt) Pack(seqId uint32) ([]byte, error) {
+func (p *CmdOpenChannelReqPkt) Pack(seqId uint8) ([]byte, error) {
 	var pktLen = CmdOpenChannelReqPktLen
 
 	var w = newPacketWriter(pktLen)
 
 	// Pack header
-	w.WriteInt(binary.BigEndian, pktLen)
-	w.WriteInt(binary.BigEndian, CMD_OPEN_CHANNEL)
-	w.WriteInt(binary.BigEndian, seqId)
+	w.WriteByte(0x05)
+	w.WriteByte(byte(CMD_OPEN_CHANNEL))
+	w.WriteByte(seqId)
 	p.SeqId = seqId
 	//w.WriteFixedSizeString(p.EquipmentSn, 11)
 	w.WriteByte(p.ChannelNum)
@@ -44,7 +42,7 @@ func (p *CmdOpenChannelReqPkt) Unpack(data []byte) error {
 	var r = newPacketReader(data)
 
 	// Sequence Id
-	r.ReadInt(binary.BigEndian, &p.SeqId)
+	p.SeqId = r.ReadByte()
 	//sn := r.ReadCString(11)
 	//p.EquipmentSn = string(sn)
 	p.ChannelNum = r.ReadByte()
@@ -53,15 +51,16 @@ func (p *CmdOpenChannelReqPkt) Unpack(data []byte) error {
 }
 
 // Pack packs the CmdActiveTestReqPkt to bytes stream for client side.
-func (p *CmdOpenChannelRspPkt) Pack(seqId uint32) ([]byte, error) {
+func (p *CmdOpenChannelRspPkt) Pack(seqId uint8) ([]byte, error) {
 	var pktLen = CmdOpenChannelRspPktLen
 
 	var w = newPacketWriter(pktLen)
 
 	// Pack header
-	w.WriteInt(binary.BigEndian, pktLen)
-	w.WriteInt(binary.BigEndian, CMD_OPEN_CHANNEL_RESP)
-	w.WriteInt(binary.BigEndian, seqId)
+	w.WriteByte(0x05)
+	w.WriteByte(byte(CMD_OPEN_CHANNEL_RESP))
+	w.WriteByte(seqId)
+
 	p.SeqId = seqId
 	w.WriteByte(p.Status)
 
@@ -75,7 +74,7 @@ func (p *CmdOpenChannelRspPkt) Unpack(data []byte) error {
 	var r = newPacketReader(data)
 
 	// Sequence Id
-	r.ReadInt(binary.BigEndian, &p.SeqId)
+	p.SeqId = r.ReadByte()
 	p.Status = r.ReadByte()
 
 	return r.Error()

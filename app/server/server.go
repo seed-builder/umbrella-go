@@ -13,7 +13,6 @@ import (
 	"os/signal"
 	"syscall"
 	"sync"
-	"github.com/beego/bee/testdata/router"
 )
 
 var wg sync.WaitGroup
@@ -22,7 +21,7 @@ func main(){
 	fmt.Println("please enter ctl+c to terminate")
 	shutdown := make(chan struct{})
 
-	go restApi()
+	//go restApi()
 	go equipmentSrv()
 
 	wg.Add(1)

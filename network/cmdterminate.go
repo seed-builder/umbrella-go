@@ -1,30 +1,29 @@
 package network
 
-import "encoding/binary"
-
 const (
-	CmdTerminateReqPktLen uint32 = 12 //12d, 0xc
-	CmdTerminateRspPktLen uint32 = 12 //12d, 0xc
+	CmdTerminateReqPktLen uint32 = 4 //12d, 0xc
+	CmdTerminateRspPktLen uint32 = 4 //12d, 0xc
 )
 
 type CmdTerminateReqPkt struct{
-	SeqId uint32
+	SeqId uint8
 }
 
 type CmdTerminateRspPkt struct{
-	SeqId uint32
+	SeqId uint8
 }
 
 // Pack packs the CmppTerminateReqPkt to bytes stream for client side.
-func (p *CmdTerminateReqPkt) Pack(seqId uint32) ([]byte, error) {
+func (p *CmdTerminateReqPkt) Pack(seqId uint8) ([]byte, error) {
 	var pktLen = CmdTerminateReqPktLen
 
 	var w = newPacketWriter(pktLen)
 
 	// Pack header
-	w.WriteInt(binary.BigEndian, pktLen)
-	w.WriteInt(binary.BigEndian, CMD_TERMINATE)
-	w.WriteInt(binary.BigEndian, seqId)
+	w.WriteByte(0x04)
+	w.WriteByte(byte(CMD_TERMINATE))
+	w.WriteByte(seqId)
+
 	p.SeqId = seqId
 
 	return w.Bytes()
@@ -37,20 +36,20 @@ func (p *CmdTerminateReqPkt) Unpack(data []byte) error {
 	var r = newPacketReader(data)
 
 	// Sequence Id
-	r.ReadInt(binary.BigEndian, &p.SeqId)
+	p.SeqId = r.ReadByte()
 	return r.Error()
 }
 
 // Pack packs the CmppTerminateRspPkt to bytes stream for client side.
-func (p *CmdTerminateRspPkt) Pack(seqId uint32) ([]byte, error) {
+func (p *CmdTerminateRspPkt) Pack(seqId uint8) ([]byte, error) {
 	var pktLen = CmdTerminateRspPktLen
 
 	var w = newPacketWriter(pktLen)
 
 	// Pack header
-	w.WriteInt(binary.BigEndian, pktLen)
-	w.WriteInt(binary.BigEndian, CMD_TERMINATE_RESP)
-	w.WriteInt(binary.BigEndian, seqId)
+	w.WriteByte(0x04)
+	w.WriteByte(byte(CMD_TERMINATE_RESP))
+	w.WriteByte(seqId)
 	p.SeqId = seqId
 
 	return w.Bytes()
@@ -63,6 +62,6 @@ func (p *CmdTerminateRspPkt) Unpack(data []byte) error {
 	var r = newPacketReader(data)
 
 	// Sequence Id
-	r.ReadInt(binary.BigEndian, &p.SeqId)
+	p.SeqId = r.ReadByte()
 	return r.Error()
 }

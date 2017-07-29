@@ -11,17 +11,17 @@ const(
 type CmdCloseChannelReqPkt struct{
 	ChannelNum uint8
 	// session info
-	SeqId uint32
+	SeqId uint8
 }
 
 type CmdCloseChannelRspPkt struct{
 	Status uint8
 	// session info
-	SeqId uint32
+	SeqId uint8
 }
 
 // Pack packs the CmdActiveTestRspPkt to bytes stream for client side.
-func (p *CmdCloseChannelReqPkt) Pack(seqId uint32) ([]byte, error) {
+func (p *CmdCloseChannelReqPkt) Pack(seqId uint8) ([]byte, error) {
 	var pktLen uint32 = CmdCloseChannelPktLen
 
 	var w = newPacketWriter(pktLen)
@@ -50,7 +50,7 @@ func (p *CmdCloseChannelReqPkt) Unpack(data []byte) error {
 
 
 // Pack packs the CmdActiveTestRspPkt to bytes stream for client side.
-func (p *CmdCloseChannelRspPkt) Pack(seqId uint32) ([]byte, error) {
+func (p *CmdCloseChannelRspPkt) Pack(seqId uint8) ([]byte, error) {
 	var pktLen uint32 = CmdCloseChannelRspPktlLen
 
 	var w = newPacketWriter(pktLen)

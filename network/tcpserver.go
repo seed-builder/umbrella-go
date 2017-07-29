@@ -38,10 +38,10 @@ func (c *conn) serve() {
 	}()
 
 	defer c.close()
-
+	c.server.ErrorLog.Printf("conn serving %v \n", c.Conn.RemoteAddr())
 	// start a goroutine for sending active test.
 	startActiveTest(c)
-
+	c.server.ErrorLog.Printf("waiting for receiving data: %v  \n", c.Conn.RemoteAddr())
 	for {
 		select {
 		case <-c.exceed:
@@ -51,6 +51,7 @@ func (c *conn) serve() {
 
 		r, err := c.readPacket()
 		if err != nil {
+			c.server.ErrorLog.Printf("receiving data: %v \n", err)
 			if e, ok := err.(net.Error); ok && e.Timeout() {
 				continue
 			}
@@ -69,7 +70,7 @@ func (c *conn) serve() {
 }
 
 func (c *conn) readPacket() (*Response, error) {
-	readTimeout := time.Second * 2
+	readTimeout := time.Second * 5
 	i, err := c.Conn.RecvAndUnpackPkt(readTimeout)
 	if err != nil {
 		return nil, err
@@ -159,13 +160,11 @@ func (c *conn) readPacket() (*Response, error) {
 
 		rsp = &Response{
 			Packet: pkt,
-			Packer: &CmdActiveTestRspPkt{
-				SeqId: p.SeqId,
-			},
-			SeqId: p.SeqId,
+			Packer: &CmdActiveTestRspPkt{},
+			SeqId: 0,
 		}
 		c.server.ErrorLog.Printf("receive a cmd active request from %v[%d]\n",
-			c.Conn.RemoteAddr(), p.SeqId)
+			c.Conn.RemoteAddr(), 0)
 
 	case *CmdActiveTestRspPkt:
 		pkt = &Packet{
@@ -177,7 +176,7 @@ func (c *conn) readPacket() (*Response, error) {
 			Packet: pkt,
 		}
 		c.server.ErrorLog.Printf("receive a cmd active response from %v[%d]\n",
-			c.Conn.RemoteAddr(), p.SeqId)
+			c.Conn.RemoteAddr(), 0)
 
 	case *CmdTerminateReqPkt:
 		pkt = &Packet{
@@ -247,7 +246,7 @@ func startActiveTest(c *conn) {
 	exceed, done := make(chan struct{}), make(chan struct{})
 	c.done = done
 	c.exceed = exceed
-
+	c.server.ErrorLog.Printf("start active test serving %v \n", c.Conn.RemoteAddr())
 	go func() {
 		t := time.NewTicker(c.t)
 		defer t.Stop()
@@ -266,7 +265,8 @@ func startActiveTest(c *conn) {
 				}
 				// send a active test packet to peer, increase the active test counter
 				p := &CmdActiveTestReqPkt{}
-				err := c.Conn.SendPkt(p, <-c.Conn.SeqId)
+				err := c.Conn.SendPkt(p, 0)
+				c.server.ErrorLog.Printf("sending active test to %v \n", c.Conn.RemoteAddr())
 				if err != nil {
 					c.server.ErrorLog.Printf("send cmd active test request to %v error: %v", c.Conn.RemoteAddr(), err)
 				} else {

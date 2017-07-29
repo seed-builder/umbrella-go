@@ -10,7 +10,7 @@ type Packet struct {
 type Response struct {
 	*Packet
 	Packer
-	SeqId uint32
+	SeqId uint8
 }
 
 type Handler interface {

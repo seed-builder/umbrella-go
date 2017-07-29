@@ -1,14 +1,15 @@
 package network
 
-import "encoding/binary"
 
 const(
-	CmdConnectReqPktLen uint32 = 12 + 11
-	CmdConnectRspPktLen uint32 = 12 + 1
+	CmdConnectReqPktLen uint32 = 4 + 11
+	CmdConnectRspPktLen uint32 = 4 + 1
 
 	ConnectWrongSn uint8 = 2
 	ConnectSuccess uint8 = 1
 	ConnectFail uint8 = 0
+
+	EquipmentSnLen int = 11
 )
 
 
@@ -17,27 +18,27 @@ type CmdConnectReqPkt struct {
 	EquipmentSn string
 
 	//session info
-	SeqId uint32
+	SeqId uint8
 }
 
 type CmdConnectRspPkt struct {
 	Status uint8
 	//session info
-	SeqId uint32
+	SeqId uint8
 }
 
 // Pack packs the CmdActiveTestReqPkt to bytes stream for client side.
-func (p *CmdConnectReqPkt) Pack(seqId uint32) ([]byte, error) {
+func (p *CmdConnectReqPkt) Pack(seqId uint8) ([]byte, error) {
 	var pktLen = CmdConnectReqPktLen
 
 	var w = newPacketWriter(pktLen)
 
 	// Pack header
-	w.WriteInt(binary.BigEndian, pktLen)
-	w.WriteInt(binary.BigEndian, CMD_CONNECT)
-	w.WriteInt(binary.BigEndian, seqId)
+	w.WriteByte(0x0B)
+	w.WriteByte(byte(CMD_CONNECT))
+	w.WriteByte(seqId)
 	p.SeqId = seqId
-	w.WriteFixedSizeString(p.EquipmentSn, 11)
+	w.WriteFixedSizeString(p.EquipmentSn, EquipmentSnLen)
 
 	return w.Bytes()
 }
@@ -49,22 +50,22 @@ func (p *CmdConnectReqPkt) Unpack(data []byte) error {
 	var r = newPacketReader(data)
 
 	// Sequence Id
-	r.ReadInt(binary.BigEndian, &p.SeqId)
-	sn := r.ReadCString(11)
+	p.SeqId = r.ReadByte()
+	sn := r.ReadCString(EquipmentSnLen)
 	p.EquipmentSn = string(sn)
 	return r.Error()
 }
 
 // Pack packs the CmdActiveTestReqPkt to bytes stream for client side.
-func (p *CmdConnectRspPkt) Pack(seqId uint32) ([]byte, error) {
+func (p *CmdConnectRspPkt) Pack(seqId uint8) ([]byte, error) {
 	var pktLen = CmdConnectRspPktLen
 
 	var w = newPacketWriter(pktLen)
 
-	// Pack header
-	w.WriteInt(binary.BigEndian, pktLen)
-	w.WriteInt(binary.BigEndian, CMD_CONNECT_RESP)
-	w.WriteInt(binary.BigEndian, seqId)
+	w.WriteByte(0x05)
+	w.WriteByte(byte(CMD_CONNECT_RESP))
+
+	w.WriteByte(seqId)
 	p.SeqId = seqId
 	w.WriteByte(p.Status)
 
@@ -78,7 +79,7 @@ func (p *CmdConnectRspPkt) Unpack(data []byte) error {
 	var r = newPacketReader(data)
 
 	// Sequence Id
-	r.ReadInt(binary.BigEndian, &p.SeqId)
+	p.SeqId = r.ReadByte()
 	p.Status = r.ReadByte()
 	return r.Error()
 }

@@ -4,11 +4,12 @@ import (
 	"net"
 	"errors"
 	"time"
-	"encoding/binary"
-	"io"
+	//"encoding/binary"
+	//"io"
 	"sync"
 	"umbrella/models"
 	"log"
+	//"bytes"
 )
 
 type State uint8
@@ -17,11 +18,14 @@ type Type int8
 
 const (
 	V10 Type = 0x10
+	CMDHEAD byte = 0xAA
+	CMDFOOT byte = 0x55
 )
 
 // Errors for conn operations
 var (
 	ErrConnIsClosed = errors.New("connection is closed")
+	ErrCmdIllegal = errors.New("illegal cmd")
 )
 
 var noDeadline = time.Time{}
@@ -43,22 +47,26 @@ type Conn struct {
 	Typ   Type
 
 	// for SeqId generator goroutine
-	SeqId <-chan uint32
+	SeqId <-chan uint8
 	done  chan<- struct{}
 
 	Equipment *models.Equipment
 }
 
-func newSeqIdGenerator() (<-chan uint32, chan<- struct{}) {
-	out := make(chan uint32)
+func newSeqIdGenerator() (<-chan uint8, chan<- struct{}) {
+	out := make(chan uint8)
 	done := make(chan struct{})
 
 	go func() {
-		var i uint32
+		var i uint8
 		for {
 			select {
 			case out <- i:
-				i++
+				if i >= 255 {
+					i = 0
+				}else{
+					i ++
+				}
 			case <-done:
 				close(out)
 				return
@@ -88,7 +96,9 @@ func (c *Conn) Close() {
 		if c.State == CONN_CLOSED {
 			return
 		}
-		c.Equipment.Offline()
+		if c.Equipment != nil {
+			c.Equipment.Offline()
+		}
 		close(c.done)  // let the SeqId goroutine exit.
 		c.Conn.Close() // close the underlying net.Conn
 		c.State = CONN_CLOSED
@@ -104,17 +114,30 @@ func (c *Conn) SetEquipment(equipment *models.Equipment){
 }
 
 // SendPkt pack the CMD packet structure and send it to the other peer.
-func (c *Conn) SendPkt(packet Packer, seqId uint32) error {
+func (c *Conn) SendPkt(packet Packer, seqId uint8) error {
 	if c.State == CONN_CLOSED {
 		return ErrConnIsClosed
 	}
-
+	buf := make([]byte, 0)
+	buf = append(buf, 0xAA)
 	data, err := packet.Pack(seqId)
 	if err != nil {
 		return err
 	}
+	//add content
+	var sum byte
+	for _, d := range data {
+		sum += d
+		buf = append(buf, d)
+	}
+	//add crc
+	buf = append(buf, sum)
+	buf = append(buf, 0x55)
 
-	_, err = c.Conn.Write(data) //block write
+	log.Println("conn send request, len = ", len(buf), " data  = ", buf )
+
+	_, err = c.Conn.Write(buf) //block write
+
 	if err != nil {
 		return err
 	}
@@ -123,15 +146,24 @@ func (c *Conn) SendPkt(packet Packer, seqId uint32) error {
 }
 
 const (
-	defaultReadBufferSize = 4096
+	defaultReadBufferSize = 64
 )
 
 // readBuffer is used to optimize the performance of
 // RecvAndUnpackPkt.
 type readBuffer struct {
-	totalLen  uint32
+	//头部固定标识： 0xAA
+	head uint8
+	//长度
+	totalLen  uint8
+	//cmd id
 	commandId CommandId
+	//
 	leftData  [defaultReadBufferSize]byte
+	//验证: len + data
+	crc uint8
+	//尾巴固定标识: 0x55
+	foot uint8
 }
 
 var readBufferPool = sync.Pool{
@@ -152,42 +184,39 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 		defer c.SetReadDeadline(noDeadline)
 	}
 
-	rb := readBufferPool.Get().(*readBuffer)
-	defer readBufferPool.Put(rb)
-
-	// Total_Length in packet
-	err := binary.Read(c.Conn, binary.BigEndian, &rb.totalLen)
+	leftData := make([]byte, defaultReadBufferSize)
+	len, err := c.Conn.Read(leftData) //io.ReadFull(c.Conn, leftData)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("receive client data len = %d, data=%v .", len, leftData[:len])
 
-	if rb.totalLen < CMD_PACKET_MIN || rb.totalLen > CMD_PACKET_MAX {
-		return nil, ErrTotalLengthInvalid
+	cmdHead := leftData[0]
+	cmdFoot := leftData[len - 1]
+	if cmdHead != CMDHEAD || cmdFoot != CMDFOOT {
+		//log.Printf("receive client data len = %d, data=%v .", len, leftData[:len])
+		return nil, ErrCmdIllegal
 	}
 
+	data := leftData[1:len-2]
+	var sum uint8
+	for _, d := range data {
+		sum += uint8(d)
+	}
+	crc := uint8(leftData[len - 2])
+	if crc != sum {
+		return nil, ErrCmdIllegal
+	}
 
+	//totalLen := uint8(leftData[1])
 	// Command_Id
-	err = binary.Read(c.Conn, binary.BigEndian, &rb.commandId)
-	if err != nil {
-		return nil, err
-	}
+	commandId := CommandId(leftData[2])
 
-	if !((rb.commandId > CMD_REQUEST_MIN && rb.commandId < CMD_REQUEST_MAX) ||
-			(rb.commandId > CMD_RESPONSE_MIN && rb.commandId < CMD_RESPONSE_MAX)) {
-		return nil, ErrCommandIdInvalid
-	}
-
-	log.Println("receive data total len: ", rb.totalLen, " command id : ", rb.commandId)
-
+	log.Println("receive data total len: ", len, " command id : ", commandId)
 	// The left packet data (start from seqId in header).
-	var leftData = rb.leftData[0:(rb.totalLen - 8)]
-	_, err = io.ReadFull(c.Conn, leftData)
-	if err != nil {
-		return nil, err
-	}
 
 	var p Packer
-	switch rb.commandId {
+	switch commandId {
 	case CMD_CONNECT:
 		p = &CmdConnectReqPkt{}
 	case CMD_CONNECT_RESP:
@@ -218,7 +247,7 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 		return nil, ErrCommandIdNotSupported
 	}
 
-	err = p.Unpack(leftData)
+	err = p.Unpack(leftData[3:len-2])
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"strconv"
+	"log"
 )
 
 var ErrNotCompleted = errors.New("data not being handled completed")
@@ -44,12 +45,12 @@ func (cli *Client) Connect(servAddr, sn string, timeout time.Duration) error {
 	req := &CmdConnectReqPkt{
 		EquipmentSn: sn,
 	}
-
+	log.Println("send connect request to server, sn = ", sn )
 	err = cli.SendReqPkt(req)
 	if err != nil {
 		return err
 	}
-
+	log.Println("send connect request to server, sn = ", sn )
 	p, err := cli.conn.RecvAndUnpackPkt(0)
 	if err != nil {
 		return err
@@ -87,7 +88,7 @@ func (cli *Client) SendReqPkt(packet Packer) error {
 }
 
 // SendRspPkt pack the cmpp response packet structure and send it to the other peer.
-func (cli *Client) SendRspPkt(packet Packer, seqId uint32) error {
+func (cli *Client) SendRspPkt(packet Packer, seqId uint8) error {
 	return cli.conn.SendPkt(packet, seqId)
 }
 

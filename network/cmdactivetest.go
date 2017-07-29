@@ -1,37 +1,34 @@
 package network
 
-import "encoding/binary"
 
 // Packet length const for cmd active test request and response packets.
 const (
-	CmdActiveTestReqPktLen uint32 = 12     //12d, 0xc
-	CmdActiveTestRspPktLen uint32 = 12 + 1 //13d, 0xd
+	CmdActiveTestReqPktLen uint32 = 3     //12d, 0xc
+	CmdActiveTestRspPktLen uint32 = 3 //13d, 0xd
 )
 
 
 type CmdActiveTestReqPkt struct {
 	// session info
-	SeqId uint32
+	//SeqId uint8
 }
 
 type CmdActiveTestRspPkt struct {
-	Reserved uint8
+	//Reserved uint8
 	// session info
-	SeqId uint32
+	//SeqId uint8
 }
 
 
 // Pack packs the CmdActiveTestReqPkt to bytes stream for client side.
-func (p *CmdActiveTestReqPkt) Pack(seqId uint32) ([]byte, error) {
+func (p *CmdActiveTestReqPkt) Pack(seqId uint8) ([]byte, error) {
 	var pktLen = CmdActiveTestReqPktLen
 
 	var w = newPacketWriter(pktLen)
 
 	// Pack header
-	w.WriteInt(binary.BigEndian, pktLen)
-	w.WriteInt(binary.BigEndian, CMD_ACTIVE_TEST)
-	w.WriteInt(binary.BigEndian, seqId)
-	p.SeqId = seqId
+	w.WriteByte(3)
+	w.WriteByte(byte(CMD_ACTIVE_TEST))
 
 	return w.Bytes()
 }
@@ -43,22 +40,18 @@ func (p *CmdActiveTestReqPkt) Unpack(data []byte) error {
 	var r = newPacketReader(data)
 
 	// Sequence Id
-	r.ReadInt(binary.BigEndian, &p.SeqId)
+	//p.SeqId = r.ReadByte()
 	return r.Error()
 }
 
 // Pack packs the CmdActiveTestRspPkt to bytes stream for client side.
-func (p *CmdActiveTestRspPkt) Pack(seqId uint32) ([]byte, error) {
+func (p *CmdActiveTestRspPkt) Pack(seqId uint8) ([]byte, error) {
 	var pktLen = CmdActiveTestRspPktLen
 
 	var w = newPacketWriter(pktLen)
 
-	// Pack header
-	w.WriteInt(binary.BigEndian, pktLen)
-	w.WriteInt(binary.BigEndian, CMD_ACTIVE_TEST_RESP)
-	w.WriteInt(binary.BigEndian, seqId)
-	w.WriteByte(p.Reserved)
-	p.SeqId = seqId
+	w.WriteByte(3)
+	w.WriteByte(byte(CMD_ACTIVE_TEST_RESP))
 
 	return w.Bytes()
 }
@@ -70,7 +63,7 @@ func (p *CmdActiveTestRspPkt) Unpack(data []byte) error {
 	var r = newPacketReader(data)
 
 	// Sequence Id
-	r.ReadInt(binary.BigEndian, &p.SeqId)
-	p.Reserved = r.ReadByte()
+	//r.ReadInt(binary.BigEndian, &p.SeqId)
+	//p.Reserved = r.ReadByte()
 	return r.Error()
 }
