@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	HttpPort string `yaml:"http_port"`
+	TcpIp string `yaml:"tcp_ip"`
 	TcpPort string `yaml:"tcp_port"`
 	TcpTestTimeout int32 `yaml:"tcp_test_timeout"`
 	TcpTestMax int32 `yaml:"tcp_test_max"`

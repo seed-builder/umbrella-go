@@ -71,7 +71,7 @@ func cors() gin.HandlerFunc {
 func equipmentSrv(){
 	defer wg.Done()
 
-	addr := ":" + utilities.SysConfig.TcpPort
+	addr := utilities.SysConfig.TcpIp + ":" + utilities.SysConfig.TcpPort
 	duration := time.Duration(utilities.SysConfig.TcpTestTimeout)* time.Second
 	err := umbrella.EquipmentSrv.ListenAndServe(
 		addr,
