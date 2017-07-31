@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"github.com/gin-gonic/gin"
 	"strconv"
+	"log"
 )
 
 func LoadEquipmentRoutes(r gin.IRouter)  {
@@ -12,12 +13,19 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 	})
 	r.POST("/equipment/:sn/open-channel", func(c *gin.Context) {
 		sn :=  c.Param("sn")
-		success, err := EquipmentSrv.OpenChannel(sn)
+		channelNum, seqId, err := EquipmentSrv.OpenChannel(sn)
 		if err == nil {
-			c.JSON(http.StatusOK, gin.H{"success": success, "err": "" })
-		}else{
-			c.JSON(http.StatusOK, gin.H{"success": success, "err": err.Error() })
+			req, ok := EquipmentSrv.Requests[seqId]
+			if ok {
+				select {
+				case <- req:
+					log.Println("channel opened!")
+					c.JSON(http.StatusOK, gin.H{"success": true, "channelNum": channelNum,  "err": "" })
+					return
+				}
+			}
 		}
+		c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
 	})
 }
 

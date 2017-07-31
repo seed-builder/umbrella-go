@@ -47,11 +47,11 @@ func main1(){
 }
 
 func restApi()  {
-	defer wg.Done()
+	//defer wg.Done()
 
 	log.Println("rest api service begin...")
 	r := gin.Default()
-	r.Use(cors())
+	//r.Use(cors())
 	// This handler will match /user/john but will not match neither /user/ or /user
 	r.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "Hello world!" )
@@ -62,12 +62,12 @@ func restApi()  {
 	r.Run(":" + utilities.SysConfig.HttpPort)
 }
 
-func cors() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Next()
-	}
-}
+//func cors() gin.HandlerFunc {
+//	return func(c *gin.Context) {
+//		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+//		c.Next()
+//	}
+//}
 
 func equipmentSrv(){
 	//defer wg.Done()
@@ -90,6 +90,7 @@ func equipmentSrv(){
 func main() {
 	fmt.Println("server start...! ")
 
+	go restApi()
 	go equipmentSrv()
 
 	fmt.Println("please input a command ...")

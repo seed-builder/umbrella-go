@@ -4,12 +4,8 @@ import (
 	"net"
 	"errors"
 	"time"
-	//"encoding/binary"
-	//"io"
-	"sync"
 	"umbrella/models"
 	"log"
-	//"bytes"
 )
 
 type State uint8
@@ -134,7 +130,7 @@ func (c *Conn) SendPkt(packet Packer, seqId uint8) error {
 	buf = append(buf, sum)
 	buf = append(buf, 0x55)
 
-	log.Println("conn send request, len = ", len(buf), " data  = ", buf )
+	log.Println("conn send data, len = ", len(buf), " data  = ", buf )
 
 	_, err = c.Conn.Write(buf) //block write
 
@@ -148,29 +144,6 @@ func (c *Conn) SendPkt(packet Packer, seqId uint8) error {
 const (
 	defaultReadBufferSize = 64
 )
-
-// readBuffer is used to optimize the performance of
-// RecvAndUnpackPkt.
-type readBuffer struct {
-	//头部固定标识： 0xAA
-	head uint8
-	//长度
-	totalLen  uint8
-	//cmd id
-	commandId CommandId
-	//
-	leftData  [defaultReadBufferSize]byte
-	//验证: len + data
-	crc uint8
-	//尾巴固定标识: 0x55
-	foot uint8
-}
-
-var readBufferPool = sync.Pool{
-	New: func() interface{} {
-		return &readBuffer{}
-	},
-}
 
 // RecvAndUnpackPkt receives CMD byte stream, and unpack it to some CMD packet structure.
 func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
@@ -251,6 +224,5 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("received packer: %v", p)
 	return p, nil
 }

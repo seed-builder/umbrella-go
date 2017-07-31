@@ -15,6 +15,8 @@ import (
 type EquipmentService struct {
 	EquipmentConns map[string]*network.Conn
 	WaitingHire map[string]uint
+	Requests map[uint8]chan struct{}
+	Redoes map[uint8]*network.Packer
 }
 
 // ListenAndServe listens on the TCP network address addr
@@ -58,20 +60,36 @@ func (es *EquipmentService) RegisterConn(equipmentSn string, conn *network.Conn)
 	es.EquipmentConns[equipmentSn] = conn
 }
 
-func (es *EquipmentService) OpenChannel(equipmentSn string) (bool, error) {
+func (es *EquipmentService) OpenChannel(equipmentSn string) (channelNum uint8, seqId uint8, err error) {
 	conn, ok := es.EquipmentConns[equipmentSn]
 	if ok {
 		channelNum := conn.Equipment.ChooseChannel()
 		req := &network.CmdOpenChannelReqPkt{}
 		req.ChannelNum = channelNum
-		err := conn.SendPkt(req, <- conn.SeqId)
+		seqId := <- conn.SeqId
+		err := conn.SendPkt(req, seqId)
+
 		if err != nil {
-			return false, err
+			return 0, 0, err
 		} else {
-			return true , nil
+			//重发
+			go func() {
+				time.Sleep(5 * time.Second)
+				_, ok := es.Requests[seqId]
+				if ok {
+					log.Println("resend  OpenChannel request pkt !")
+					conn.SendPkt(req, seqId)
+				}
+			}()
+
+			_, ok := es.Requests[seqId]
+			if !ok {
+				es.Requests[seqId] = make(chan struct{})
+			}
+			return channelNum , seqId, nil
 		}
-	} else{
-		return false, errors.New("equipment is offline")
+	} else {
+		return 0, 0, errors.New("equipment is offline")
 	}
 }
 
@@ -157,13 +175,15 @@ func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Pac
 
 //HandleOpenChannelRsp
 func (es *EquipmentService) HandleOpenChannelRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error) {
-	_, ok := p.Packer.(*network.CmdOpenChannelRspPkt)
-	if !ok {
-		// not a connect request, ignore it,
-		// go on to next handler
-		return true, nil
+	rsp, ok := p.Packer.(*network.CmdOpenChannelRspPkt)
+	if ok {
+		c, o := es.Requests[rsp.SeqId]
+		if o {
+			log.Println("close request seqid = ", rsp.SeqId)
+			close(c)
+			delete( es.Requests, rsp.SeqId )
+		}
 	}
-
 	return true, nil
 }
 
@@ -195,6 +215,7 @@ var EquipmentSrv *EquipmentService
 func init()  {
 	EquipmentSrv = &EquipmentService{
 		EquipmentConns: make(map[string]*network.Conn),
+		Requests: make(map[uint8]chan struct{}),
 	}
 }
 

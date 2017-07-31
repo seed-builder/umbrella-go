@@ -5,7 +5,7 @@ import (
 	"log"
 	"sync"
 	"umbrella/network"
-	"math/rand"
+	//"math/rand"
 )
 
 const (
@@ -39,7 +39,7 @@ func startAClient(idx int, sn string) {
 	c := network.NewClient(0x10)
 	defer wg.Done()
 	defer c.Disconnect()
-	err := c.Connect("119.23.214.176:7777", sn, connectTimeout)
+	err := c.Connect(":7777", sn, connectTimeout)
 	if err != nil {
 		log.Printf("client %d: connect error: %s.", idx, err)
 		return
@@ -52,17 +52,17 @@ func startAClient(idx int, sn string) {
 		select {
 		case <-t.C:
 
-			p :=  &network.CmdUmbrellaInReqPkt{}
-			p.ChannelNum = uint8(rand.Intn(10))
-			var i = rand.Intn(19)
-			p.UmbrellaSn = umbrellaSns[i]
-			err = c.SendReqPkt(p)
-			log.Printf("client %d: send a umbrella in request : %v.", idx, p)
-			if err != nil {
-				log.Printf("client %d: send a umbrella in request error: %s.", idx, err)
-			} else {
-				log.Printf("client %d: send a umbrella in request ok", idx)
-			}
+			//p :=  &network.CmdUmbrellaInReqPkt{}
+			//p.ChannelNum = uint8(rand.Intn(10))
+			//var i = rand.Intn(19)
+			//p.UmbrellaSn = umbrellaSns[i]
+			//err = c.SendReqPkt(p)
+			//log.Printf("client %d: send a umbrella in request : %v.", idx, p)
+			//if err != nil {
+			//	log.Printf("client %d: send a umbrella in request error: %s.", idx, err)
+			//} else {
+			//	log.Printf("client %d: send a umbrella in request ok", idx)
+			//}
 			break
 		default:
 		}
@@ -87,8 +87,6 @@ func startAClient(idx int, sn string) {
 			}else{
 				log.Printf("client %d: send network active response success.", idx)
 			}
-		case *network.CmdActiveTestRspPkt:
-			log.Printf("client %d: receive a network activetest response: %v.", idx, p)
 
 		case *network.CmdTerminateReqPkt:
 			log.Printf("client %d: receive a network terminate request: %v.", idx, p)
@@ -98,10 +96,24 @@ func startAClient(idx int, sn string) {
 				log.Printf("client %d: send network terminate response error: %s.", idx, err)
 				break
 			}
-		case *network.CmdTerminateRspPkt:
-			log.Printf("client %d: receive a network terminate response: %v.", idx,p)
+
 		case *network.CmdUmbrellaInRspPkt:
 			log.Printf("client %d: receive a network umbrella in response: %v.", idx, p)
+
+		case *network.CmdOpenChannelReqPkt:
+			log.Printf("client %d: receive a network open channel request: %v.", idx, p)
+			rsp := &network.CmdOpenChannelRspPkt{
+				Status: 1,
+			}
+			time.Sleep(6*time.Second)
+			err := c.SendRspPkt(rsp, p.SeqId)
+			if err != nil {
+				log.Printf("client %d: send network open channel  response error: %s.", idx, err)
+				break
+			}else{
+				log.Printf("client %d: send network open channel  response success.", idx)
+			}
+
 		}
 	}
 }
