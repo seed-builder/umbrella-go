@@ -1,0 +1,10 @@
+package: umbrella
+import:
+- package: github.com/gin-gonic/gin
+  version: ^1.2.0
+- package: github.com/go-sql-driver/mysql
+  version: ^1.3.0
+- package: github.com/jinzhu/gorm
+  version: ^1.0.0
+- package: github.com/mitchellh/mapstructure
+- package: gopkg.in/yaml.v2

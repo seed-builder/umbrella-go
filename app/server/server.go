@@ -13,11 +13,13 @@ import (
 	"os/signal"
 	"syscall"
 	"sync"
+	"bufio"
+	"strings"
 )
 
 var wg sync.WaitGroup
 
-func main(){
+func main1(){
 	fmt.Println("please enter ctl+c to terminate")
 	shutdown := make(chan struct{})
 
@@ -58,7 +60,6 @@ func restApi()  {
 	umbrella.LoadUmbrellaRoutes(r)
 	umbrella.LoadCustomerHireRoutes(r)
 	r.Run(":" + utilities.SysConfig.HttpPort)
-	log.Println("restApi return ")
 }
 
 func cors() gin.HandlerFunc {
@@ -69,10 +70,11 @@ func cors() gin.HandlerFunc {
 }
 
 func equipmentSrv(){
-	defer wg.Done()
+	//defer wg.Done()
 
 	addr := utilities.SysConfig.TcpIp + ":" + utilities.SysConfig.TcpPort
 	duration := time.Duration(utilities.SysConfig.TcpTestTimeout)* time.Second
+	log.Println("equipmentSrv start serve at addr: ", addr)
 	err := umbrella.EquipmentSrv.ListenAndServe(
 		addr,
 		network.V10,
@@ -83,6 +85,32 @@ func equipmentSrv(){
 	if err != nil {
 		log.Println("equipment ListenAndServ error:", err)
 	}
-	log.Println("equipmentSrv return ")
-	return
+}
+
+func main() {
+	fmt.Println("server start...! ")
+
+	go equipmentSrv()
+
+	fmt.Println("please input a command ...")
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if arr := strings.Fields(line); len(arr) > 0 {
+			switch arr[0] {
+			case "exit":
+				fmt.Println("server exit...")
+				umbrella.EquipmentSrv.Close()
+				os.Exit(0)
+			case "open":
+				umbrella.EquipmentSrv.OpenChannel(arr[1])
+			default:
+
+			}
+		}
+		fmt.Println("please input a command ...")
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, "reading standard input:", err)
+	}
 }
