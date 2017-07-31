@@ -95,7 +95,7 @@ func (c *conn) readPacket() (*Response, error) {
 		c.server.ErrorLog.Printf("receive a cmd connect request from %v[%d]\n",
 			c.Conn.RemoteAddr(), p.SeqId)
 
-	case *CmdOpenChannelReqPkt:
+	case *CmdUmbrellaOutReqPkt:
 		pkt = &Packet{
 			Packer: p,
 			Conn:   c.Conn,
@@ -103,7 +103,7 @@ func (c *conn) readPacket() (*Response, error) {
 
 		rsp = &Response{
 			Packet: pkt,
-			Packer: &CmdOpenChannelRspPkt{
+			Packer: &CmdUmbrellaOutRspPkt{
 				SeqId: p.SeqId,
 			},
 			SeqId: p.SeqId,
@@ -111,7 +111,7 @@ func (c *conn) readPacket() (*Response, error) {
 		c.server.ErrorLog.Printf("receive a cmd open channel request from %v[%d]\n",
 			c.Conn.RemoteAddr(), p.SeqId)
 
-	case *CmdOpenChannelRspPkt:
+	case *CmdUmbrellaOutRspPkt:
 		pkt = &Packet{
 			Packer: p,
 			Conn:   c.Conn,
@@ -137,20 +137,20 @@ func (c *conn) readPacket() (*Response, error) {
 		c.server.ErrorLog.Printf("receive a cmd umbrella in request from %v[%d]\n",
 			c.Conn.RemoteAddr(), p.SeqId)
 
-	case *CmdUmbrellaOutReqPkt:
-		pkt = &Packet{
-			Packer: p,
-			Conn:   c.Conn,
-		}
-		rsp = &Response{
-			Packet: pkt,
-			Packer: &CmdUmbrellaOutRspPkt{
-				SeqId: p.SeqId,
-			},
-			SeqId: p.SeqId,
-		}
-		c.server.ErrorLog.Printf("receive a cmd umbrella out request from %v[%d]\n",
-			c.Conn.RemoteAddr(), p.SeqId)
+	//case *CmdUmbrellaOutReqPkt:
+	//	pkt = &Packet{
+	//		Packer: p,
+	//		Conn:   c.Conn,
+	//	}
+	//	rsp = &Response{
+	//		Packet: pkt,
+	//		Packer: &CmdUmbrellaOutRspPkt{
+	//			SeqId: p.SeqId,
+	//		},
+	//		SeqId: p.SeqId,
+	//	}
+	//	c.server.ErrorLog.Printf("receive a cmd umbrella out request from %v[%d]\n",
+	//		c.Conn.RemoteAddr(), p.SeqId)
 
 	case *CmdActiveTestReqPkt:
 		pkt = &Packet{
@@ -204,6 +204,33 @@ func (c *conn) readPacket() (*Response, error) {
 			Packet: pkt,
 		}
 		c.server.ErrorLog.Printf("receive a cmpp terminate response from %v[%d]\n",
+			c.Conn.RemoteAddr(), p.SeqId)
+
+	case *CmdUmbrellaCheckReqPkt:
+		pkt = &Packet{
+			Packer: p,
+			Conn:   c.Conn,
+		}
+		rsp = &Response{
+			Packet: pkt,
+			Packer: &CmdUmbrellaCheckRspPkt{
+				SeqId: p.SeqId,
+			},
+			SeqId: p.SeqId,
+		}
+		c.server.ErrorLog.Printf("receive a cmd umbrella check request from %v[%d]\n",
+			c.Conn.RemoteAddr(), p.SeqId)
+
+	case *CmdUmbrellaCheckRspPkt:
+		pkt = &Packet{
+			Packer: p,
+			Conn:   c.Conn,
+		}
+		rsp = &Response{
+			Packet: pkt,
+			SeqId: p.SeqId,
+		}
+		c.server.ErrorLog.Printf("receive a cmd umbrella check response from %v[%d]\n",
 			c.Conn.RemoteAddr(), p.SeqId)
 
 	default:

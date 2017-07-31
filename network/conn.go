@@ -198,18 +198,18 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 		p = &CmdTerminateReqPkt{}
 	case CMD_TERMINATE_RESP:
 		p = &CmdTerminateRspPkt{}
-	case CMD_OPEN_CHANNEL:
-		p = &CmdOpenChannelReqPkt{}
-	case CMD_OPEN_CHANNEL_RESP:
-		p = &CmdOpenChannelRspPkt{}
-	case CMD_UMBRELLA_IN:
-		p = &CmdUmbrellaInReqPkt{}
-	case CMD_UMBRELLA_IN_RESP:
-		p = &CmdUmbrellaInRspPkt{}
 	case CMD_UMBRELLA_OUT:
 		p = &CmdUmbrellaOutReqPkt{}
 	case CMD_UMBRELLA_OUT_RESP:
 		p = &CmdUmbrellaOutRspPkt{}
+	case CMD_UMBRELLA_IN:
+		p = &CmdUmbrellaInReqPkt{}
+	case CMD_UMBRELLA_IN_RESP:
+		p = &CmdUmbrellaInRspPkt{}
+	case CMD_UMBRELLA_CHECK:
+		p = &CmdUmbrellaCheckReqPkt{}
+	case CMD_UMBRELLA_CHECK_RESP:
+		p = &CmdUmbrellaCheckRspPkt{}
 	case CMD_ACTIVE_TEST:
 		p = &CmdActiveTestReqPkt{}
 	case CMD_ACTIVE_TEST_RESP:
@@ -219,10 +219,11 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 		p = nil
 		return nil, ErrCommandIdNotSupported
 	}
-
-	err = p.Unpack(leftData[3:len-2])
-	if err != nil {
-		return nil, err
+	if (len-2) > 3 {
+		err = p.Unpack(leftData[3:len-2])
+		if err != nil {
+			return nil, err
+		}
 	}
 	return p, nil
 }

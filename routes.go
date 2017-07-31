@@ -15,14 +15,12 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 		sn :=  c.Param("sn")
 		channelNum, seqId, err := EquipmentSrv.OpenChannel(sn)
 		if err == nil {
-			req, ok := EquipmentSrv.Requests[seqId]
+			chan_sn, ok := EquipmentSrv.Requests[seqId]
 			if ok {
-				select {
-				case <- req:
-					log.Println("channel opened!")
-					c.JSON(http.StatusOK, gin.H{"success": true, "channelNum": channelNum,  "err": "" })
-					return
-				}
+				sn := <- chan_sn
+				log.Println("channel opened!")
+				c.JSON(http.StatusOK, gin.H{"success": true, "channelNum": channelNum, "umbrella_sn": sn,  "err": "" })
+				return
 			}
 		}
 		c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })

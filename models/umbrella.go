@@ -52,6 +52,17 @@ func (m *Umbrella) Query() *gorm.DB{
 	return utilities.MyDB.Model(&Umbrella{})
 }
 
+func (m *Umbrella) Check(umbrellaSn string) uint8 {
+	m.Query().First(m, "sn = ?", umbrellaSn)
+	if m.ID == 0 {
+		return utilities.RspStatusUmbrellaIllegal
+	}
+	if m.Status == UmbrellaStatusExpired {
+		return utilities.RspStatusUmbrellaExpired
+	}
+	return utilities.RspStatusSuccess
+}
+
 //InEquipment 进入设备, 还伞
 func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8)  uint8 {
 	m.Query().First(m, "sn = ?", umbrellaSn)

@@ -10,6 +10,7 @@ const(
 	ConnectFail uint8 = 0
 
 	EquipmentSnLen int = 11
+
 )
 
 

@@ -5,7 +5,7 @@ const (
 	CmdUmbrellaInReqPktLen uint32 = 5+7
 	CmdUmbrellaInRspPktLen uint32 = 5
 
-	UmbrellaSnLen int = 7
+	//UmbrellaSnLen int = 7
 )
 
 type CmdUmbrellaInReqPkt struct{

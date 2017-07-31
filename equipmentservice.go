@@ -15,7 +15,7 @@ import (
 type EquipmentService struct {
 	EquipmentConns map[string]*network.Conn
 	WaitingHire map[string]uint
-	Requests map[uint8]chan struct{}
+	Requests map[uint8]chan string
 	Redoes map[uint8]*network.Packer
 }
 
@@ -32,8 +32,8 @@ func (es *EquipmentService) ListenAndServe(addr string, ver  network.Type, t tim
 	handlers := []network.Handler{
 		network.HandlerFunc(es.HandleConnect),
 		network.HandlerFunc(es.HandleUmbrellaIn),
-		network.HandlerFunc(es.HandleUmbrellaOut),
-		network.HandlerFunc(es.HandleOpenChannelRsp),
+		network.HandlerFunc(es.HandleUmbrellaOutRsp),
+		//network.HandlerFunc(es.HandleOpenChannelRsp),
 	}
 
 	var handler network.Handler
@@ -64,7 +64,7 @@ func (es *EquipmentService) OpenChannel(equipmentSn string) (channelNum uint8, s
 	conn, ok := es.EquipmentConns[equipmentSn]
 	if ok {
 		channelNum := conn.Equipment.ChooseChannel()
-		req := &network.CmdOpenChannelReqPkt{}
+		req := &network.CmdUmbrellaOutReqPkt{}
 		req.ChannelNum = channelNum
 		seqId := <- conn.SeqId
 		err := conn.SendPkt(req, seqId)
@@ -84,7 +84,7 @@ func (es *EquipmentService) OpenChannel(equipmentSn string) (channelNum uint8, s
 
 			_, ok := es.Requests[seqId]
 			if !ok {
-				es.Requests[seqId] = make(chan struct{})
+				es.Requests[seqId] = make(chan string)
 			}
 			return channelNum , seqId, nil
 		}
@@ -99,7 +99,7 @@ func (es *EquipmentService) DoHire(hire_id uint) (success bool, err error) {
 	conn, ok := es.EquipmentConns[hire.HireEquipment.Sn]
 	if ok {
 		channelNum := conn.Equipment.ChooseChannel()
-		req := &network.CmdOpenChannelReqPkt{}
+		req := &network.CmdUmbrellaOutReqPkt{}
 		req.ChannelNum = channelNum
 		err := conn.SendPkt(req, <- conn.SeqId)
 		if err != nil {
@@ -173,23 +173,8 @@ func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Pac
 	return true, nil
 }
 
-//HandleOpenChannelRsp
-func (es *EquipmentService) HandleOpenChannelRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error) {
-	rsp, ok := p.Packer.(*network.CmdOpenChannelRspPkt)
-	if ok {
-		c, o := es.Requests[rsp.SeqId]
-		if o {
-			log.Println("close request seqid = ", rsp.SeqId)
-			close(c)
-			delete( es.Requests, rsp.SeqId )
-		}
-	}
-	return true, nil
-}
-
-//handleUmbrellaOut: umbrella out channel request
-func (es *EquipmentService) HandleUmbrellaOut(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
-	req, ok := p.Packer.(*network.CmdUmbrellaOutReqPkt)
+func (es *EquipmentService) HandleUmbrellaCheck(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
+	req, ok := p.Packer.(*network.CmdUmbrellaCheckReqPkt)
 	if !ok {
 		// not a connect request, ignore it,
 		// go on to next handler
@@ -198,24 +183,60 @@ func (es *EquipmentService) HandleUmbrellaOut(r *network.Response, p *network.Pa
 	if r.Packet.Conn.State != network.CONN_AUTHOK {
 		return false, network.ErrConnNeedAuth
 	}
-	l.Printf("handle the umbrella out request , %v", req)
-	resp := r.Packer.(*network.CmdUmbrellaOutRspPkt)
+	l.Printf("handle the umbrella in request , %v", req)
+	resp := r.Packer.(*network.CmdUmbrellaCheckRspPkt)
 	umbrella := models.Umbrella{}
-	k := es.getKey(r.Packet.Conn.Equipment.Sn, req.ChannelNum)
-	hire_id, ok := es.WaitingHire[k]
-	if ok {
-		delete(es.WaitingHire, k)
-	}
-	resp.Status = umbrella.OutEquipment(r.Packet.Conn.Equipment, req.UmbrellaSn, req.ChannelNum, hire_id)
+	resp.Status = umbrella.Check(req.UmbrellaSn)
 	return true, nil
 }
+
+//HandleOpenChannelRsp
+func (es *EquipmentService) HandleUmbrellaOutRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error) {
+	rsp, ok := p.Packer.(*network.CmdUmbrellaOutRspPkt)
+	if ok {
+		c, o := es.Requests[rsp.SeqId]
+		if o {
+			log.Println("close request seqid = ", rsp.SeqId)
+			if rsp.Status == 1 {
+				c <- rsp.UmbrellaSn
+			}else{
+				close(c)
+			}
+			delete( es.Requests, rsp.SeqId )
+		}
+	}
+	return true, nil
+}
+
+//handleUmbrellaOut: umbrella out channel request
+//func (es *EquipmentService) HandleUmbrellaOut(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
+//	req, ok := p.Packer.(*network.CmdUmbrellaOutReqPkt)
+//	if !ok {
+//		// not a connect request, ignore it,
+//		// go on to next handler
+//		return true, nil
+//	}
+//	if r.Packet.Conn.State != network.CONN_AUTHOK {
+//		return false, network.ErrConnNeedAuth
+//	}
+//	l.Printf("handle the umbrella out request , %v", req)
+//	resp := r.Packer.(*network.CmdUmbrellaOutRspPkt)
+//	umbrella := models.Umbrella{}
+//	k := es.getKey(r.Packet.Conn.Equipment.Sn, req.ChannelNum)
+//	hire_id, ok := es.WaitingHire[k]
+//	if ok {
+//		delete(es.WaitingHire, k)
+//	}
+//	resp.Status = umbrella.OutEquipment(r.Packet.Conn.Equipment, req.UmbrellaSn, req.ChannelNum, hire_id)
+//	return true, nil
+//}
 
 var EquipmentSrv *EquipmentService
 
 func init()  {
 	EquipmentSrv = &EquipmentService{
 		EquipmentConns: make(map[string]*network.Conn),
-		Requests: make(map[uint8]chan struct{}),
+		Requests: make(map[uint8]chan string),
 	}
 }
 

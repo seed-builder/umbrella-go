@@ -100,9 +100,9 @@ func startAClient(idx int, sn string) {
 		case *network.CmdUmbrellaInRspPkt:
 			log.Printf("client %d: receive a network umbrella in response: %v.", idx, p)
 
-		case *network.CmdOpenChannelReqPkt:
+		case *network.CmdUmbrellaOutReqPkt:
 			log.Printf("client %d: receive a network open channel request: %v.", idx, p)
-			rsp := &network.CmdOpenChannelRspPkt{
+			rsp := &network.CmdUmbrellaOutRspPkt{
 				Status: 1,
 			}
 			time.Sleep(6*time.Second)

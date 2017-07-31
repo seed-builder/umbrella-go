@@ -37,11 +37,12 @@ func (p *CmdActiveTestReqPkt) Pack(seqId uint8) ([]byte, error) {
 // After unpack, you will get all value of fields in
 // CmdActiveTestReqPkt struct.
 func (p *CmdActiveTestReqPkt) Unpack(data []byte) error {
-	var r = newPacketReader(data)
-
-	// Sequence Id
-	//p.SeqId = r.ReadByte()
-	return r.Error()
+	//var r = newPacketReader(data)
+	//
+	//// Sequence Id
+	////p.SeqId = r.ReadByte()
+	//return r.Error()
+	return nil
 }
 
 // Pack packs the CmdActiveTestRspPkt to bytes stream for client side.
@@ -60,10 +61,11 @@ func (p *CmdActiveTestRspPkt) Pack(seqId uint8) ([]byte, error) {
 // After unpack, you will get all value of fields in
 // CmdActiveTestRspPkt struct.
 func (p *CmdActiveTestRspPkt) Unpack(data []byte) error {
-	var r = newPacketReader(data)
-
-	// Sequence Id
-	//r.ReadInt(binary.BigEndian, &p.SeqId)
-	//p.Reserved = r.ReadByte()
-	return r.Error()
+	//var r = newPacketReader(data)
+	//
+	//// Sequence Id
+	////r.ReadInt(binary.BigEndian, &p.SeqId)
+	////p.Reserved = r.ReadByte()
+	//return r.Error
+	return nil
 }
