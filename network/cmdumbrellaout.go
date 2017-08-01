@@ -66,6 +66,7 @@ func (p *CmdUmbrellaOutRspPkt) Pack(seqId uint8) ([]byte, error) {
 
 	p.SeqId = seqId
 	w.WriteByte(p.Status)
+	w.WriteFixedSizeString(p.UmbrellaSn, UmbrellaSnLen)
 
 	return w.Bytes()
 }

@@ -51,23 +51,31 @@ func restApi()  {
 
 	log.Println("rest api service begin...")
 	r := gin.Default()
-	//r.Use(cors())
+	r.Use(cors())
 	// This handler will match /user/john but will not match neither /user/ or /user
 	r.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "Hello world!" )
 	})
 	umbrella.LoadEquipmentRoutes(r)
-	umbrella.LoadUmbrellaRoutes(r)
-	umbrella.LoadCustomerHireRoutes(r)
-	r.Run(":" + utilities.SysConfig.HttpPort)
+	//r.Run(":" + utilities.SysConfig.HttpPort)
+
+	s := &http.Server{
+		Addr:           ":" + utilities.SysConfig.HttpPort,
+		Handler:        r,
+		ReadTimeout:    90 * time.Second,
+		WriteTimeout:   90 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+	s.ListenAndServe()
+
 }
 
-//func cors() gin.HandlerFunc {
-//	return func(c *gin.Context) {
-//		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-//		c.Next()
-//	}
-//}
+func cors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Next()
+	}
+}
 
 func equipmentSrv(){
 	//defer wg.Done()

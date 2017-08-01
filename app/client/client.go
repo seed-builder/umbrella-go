@@ -104,6 +104,7 @@ func startAClient(idx int, sn string) {
 			log.Printf("client %d: receive a network open channel request: %v.", idx, p)
 			rsp := &network.CmdUmbrellaOutRspPkt{
 				Status: 1,
+				UmbrellaSn: "12345678",
 			}
 			time.Sleep(6*time.Second)
 			err := c.SendRspPkt(rsp, p.SeqId)

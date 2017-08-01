@@ -74,7 +74,7 @@ func (es *EquipmentService) OpenChannel(equipmentSn string) (channelNum uint8, s
 		} else {
 			//重发
 			go func() {
-				time.Sleep(5 * time.Second)
+				time.Sleep(15 * time.Second)
 				_, ok := es.Requests[seqId]
 				if ok {
 					log.Println("resend  OpenChannel request pkt !")
@@ -90,27 +90,6 @@ func (es *EquipmentService) OpenChannel(equipmentSn string) (channelNum uint8, s
 		}
 	} else {
 		return 0, 0, errors.New("equipment is offline")
-	}
-}
-
-func (es *EquipmentService) DoHire(hire_id uint) (success bool, err error) {
-	hire := models.CustomerHire{}
-	hire.Query().Preload("HireEquipment").First(&hire, hire_id)
-	conn, ok := es.EquipmentConns[hire.HireEquipment.Sn]
-	if ok {
-		channelNum := conn.Equipment.ChooseChannel()
-		req := &network.CmdUmbrellaOutReqPkt{}
-		req.ChannelNum = channelNum
-		err := conn.SendPkt(req, <- conn.SeqId)
-		if err != nil {
-			return false, err
-		} else {
-			k := es.getKey(hire.HireEquipment.Sn, channelNum)
-			es.WaitingHire[k] = hire_id
-			return true , nil
-		}
-	} else{
-		return false, errors.New("equipment is offline")
 	}
 }
 
@@ -207,29 +186,6 @@ func (es *EquipmentService) HandleUmbrellaOutRsp(r *network.Response, p *network
 	}
 	return true, nil
 }
-
-//handleUmbrellaOut: umbrella out channel request
-//func (es *EquipmentService) HandleUmbrellaOut(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
-//	req, ok := p.Packer.(*network.CmdUmbrellaOutReqPkt)
-//	if !ok {
-//		// not a connect request, ignore it,
-//		// go on to next handler
-//		return true, nil
-//	}
-//	if r.Packet.Conn.State != network.CONN_AUTHOK {
-//		return false, network.ErrConnNeedAuth
-//	}
-//	l.Printf("handle the umbrella out request , %v", req)
-//	resp := r.Packer.(*network.CmdUmbrellaOutRspPkt)
-//	umbrella := models.Umbrella{}
-//	k := es.getKey(r.Packet.Conn.Equipment.Sn, req.ChannelNum)
-//	hire_id, ok := es.WaitingHire[k]
-//	if ok {
-//		delete(es.WaitingHire, k)
-//	}
-//	resp.Status = umbrella.OutEquipment(r.Packet.Conn.Equipment, req.UmbrellaSn, req.ChannelNum, hire_id)
-//	return true, nil
-//}
 
 var EquipmentSrv *EquipmentService
 
