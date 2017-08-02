@@ -77,6 +77,7 @@ func (m *Equipment) ChooseChannel() (channelNum uint8) {
 func (m *Equipment) InChannel(channelNum uint8){
 	n := m.ChannelCache[channelNum]
 	m.ChannelCache[channelNum] = n + 1
+	m.UsedChannelNum = channelNum
 }
 
 func (m *Equipment) OutChannel(channelNum uint8){

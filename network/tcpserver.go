@@ -55,7 +55,11 @@ func (c *conn) serve() {
 			if e, ok := err.(net.Error); ok && e.Timeout() {
 				continue
 			}
+			if err == ErrCmdIllegal {
+				continue
+			}
 			break
+			//continue
 		}
 
 		_, err = c.server.Handler.ServeHandle(r, r.Packet, c.server.ErrorLog)
@@ -178,61 +182,6 @@ func (c *conn) readPacket() (*Response, error) {
 		c.server.ErrorLog.Printf("receive a cmd active response from %v[%d]\n",
 			c.Conn.RemoteAddr(), 0)
 
-	case *CmdTerminateReqPkt:
-		pkt = &Packet{
-			Packer: p,
-			Conn:   c.Conn,
-		}
-
-		rsp = &Response{
-			Packet: pkt,
-			Packer: &CmdTerminateRspPkt{
-				SeqId: p.SeqId,
-			},
-			SeqId: p.SeqId,
-		}
-		c.server.ErrorLog.Printf("receive a cmpp terminate request from %v[%d]\n",
-			c.Conn.RemoteAddr(), p.SeqId)
-
-	case *CmdTerminateRspPkt:
-		pkt = &Packet{
-			Packer: p,
-			Conn:   c.Conn,
-		}
-
-		rsp = &Response{
-			Packet: pkt,
-		}
-		c.server.ErrorLog.Printf("receive a cmpp terminate response from %v[%d]\n",
-			c.Conn.RemoteAddr(), p.SeqId)
-
-	case *CmdUmbrellaCheckReqPkt:
-		pkt = &Packet{
-			Packer: p,
-			Conn:   c.Conn,
-		}
-		rsp = &Response{
-			Packet: pkt,
-			Packer: &CmdUmbrellaCheckRspPkt{
-				SeqId: p.SeqId,
-			},
-			SeqId: p.SeqId,
-		}
-		c.server.ErrorLog.Printf("receive a cmd umbrella check request from %v[%d]\n",
-			c.Conn.RemoteAddr(), p.SeqId)
-
-	case *CmdUmbrellaCheckRspPkt:
-		pkt = &Packet{
-			Packer: p,
-			Conn:   c.Conn,
-		}
-		rsp = &Response{
-			Packet: pkt,
-			SeqId: p.SeqId,
-		}
-		c.server.ErrorLog.Printf("receive a cmd umbrella check response from %v[%d]\n",
-			c.Conn.RemoteAddr(), p.SeqId)
-
 	default:
 		return nil, NewOpError(ErrUnsupportedPkt,
 			fmt.Sprintf("readPacket: receive unsupported packet type: %#v", p))
@@ -242,13 +191,6 @@ func (c *conn) readPacket() (*Response, error) {
 
 // Close the connection.
 func (c *conn) close() {
-	p := &CmdTerminateReqPkt{}
-
-	err := c.Conn.SendPkt(p, <-c.Conn.SeqId)
-	if err != nil {
-		c.server.ErrorLog.Printf("send cmd terminate request packet to %v error: %v\n", c.Conn.RemoteAddr(), err)
-	}
-
 	close(c.done)
 	c.server.ErrorLog.Printf("close connection with %v!\n", c.Conn.RemoteAddr())
 	c.Conn.Close()

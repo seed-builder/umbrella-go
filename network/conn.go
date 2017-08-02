@@ -130,7 +130,7 @@ func (c *Conn) SendPkt(packet Packer, seqId uint8) error {
 	buf = append(buf, sum)
 	buf = append(buf, 0x55)
 
-	log.Println("conn send data, len = ", len(buf), " data  = ", buf )
+	log.Printf("conn send data, len = %d, data = %x \n", len(buf), buf )
 
 	_, err = c.Conn.Write(buf) //block write
 
@@ -162,7 +162,7 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("receive client data len = %d, data=%v .", len, leftData[:len])
+	log.Printf("receive client data len = %d, data=%x . \n", len, leftData[:len])
 
 	cmdHead := leftData[0]
 	cmdFoot := leftData[len - 1]
@@ -185,7 +185,7 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 	// Command_Id
 	commandId := CommandId(leftData[2])
 
-	log.Println("receive data total len: ", len, " command id : ", commandId)
+	log.Printf("receive data total len: %d,  command id : %x \n", len, commandId)
 	// The left packet data (start from seqId in header).
 
 	var p Packer
@@ -194,10 +194,6 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 		p = &CmdConnectReqPkt{}
 	case CMD_CONNECT_RESP:
 		p = &CmdConnectRspPkt{}
-	case CMD_TERMINATE:
-		p = &CmdTerminateReqPkt{}
-	case CMD_TERMINATE_RESP:
-		p = &CmdTerminateRspPkt{}
 	case CMD_UMBRELLA_OUT:
 		p = &CmdUmbrellaOutReqPkt{}
 	case CMD_UMBRELLA_OUT_RESP:
@@ -206,10 +202,6 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 		p = &CmdUmbrellaInReqPkt{}
 	case CMD_UMBRELLA_IN_RESP:
 		p = &CmdUmbrellaInRspPkt{}
-	case CMD_UMBRELLA_CHECK:
-		p = &CmdUmbrellaCheckReqPkt{}
-	case CMD_UMBRELLA_CHECK_RESP:
-		p = &CmdUmbrellaCheckRspPkt{}
 	case CMD_ACTIVE_TEST:
 		p = &CmdActiveTestReqPkt{}
 	case CMD_ACTIVE_TEST_RESP:

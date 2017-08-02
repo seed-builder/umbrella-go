@@ -39,6 +39,7 @@ func startAClient(idx int, sn string) {
 	c := network.NewClient(0x10)
 	defer wg.Done()
 	defer c.Disconnect()
+	//119.23.214.176
 	err := c.Connect(":7777", sn, connectTimeout)
 	if err != nil {
 		log.Printf("client %d: connect error: %s.", idx, err)
@@ -88,14 +89,6 @@ func startAClient(idx int, sn string) {
 				log.Printf("client %d: send network active response success.", idx)
 			}
 
-		case *network.CmdTerminateReqPkt:
-			log.Printf("client %d: receive a network terminate request: %v.", idx, p)
-			rsp := &network.CmdTerminateRspPkt{}
-			err := c.SendRspPkt(rsp, p.SeqId)
-			if err != nil {
-				log.Printf("client %d: send network terminate response error: %s.", idx, err)
-				break
-			}
 
 		case *network.CmdUmbrellaInRspPkt:
 			log.Printf("client %d: receive a network umbrella in response: %v.", idx, p)

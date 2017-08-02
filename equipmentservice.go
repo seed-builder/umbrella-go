@@ -152,24 +152,6 @@ func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Pac
 	return true, nil
 }
 
-func (es *EquipmentService) HandleUmbrellaCheck(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
-	req, ok := p.Packer.(*network.CmdUmbrellaCheckReqPkt)
-	if !ok {
-		// not a connect request, ignore it,
-		// go on to next handler
-		return true, nil
-	}
-	if r.Packet.Conn.State != network.CONN_AUTHOK {
-		return false, network.ErrConnNeedAuth
-	}
-	l.Printf("handle the umbrella in request , %v", req)
-	resp := r.Packer.(*network.CmdUmbrellaCheckRspPkt)
-	umbrella := models.Umbrella{}
-	resp.Status = umbrella.Check(req.UmbrellaSn)
-	resp.ChannelNum = req.ChannelNum
-	return true, nil
-}
-
 //HandleOpenChannelRsp
 func (es *EquipmentService) HandleUmbrellaOutRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error) {
 	rsp, ok := p.Packer.(*network.CmdUmbrellaOutRspPkt)
