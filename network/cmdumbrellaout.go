@@ -7,18 +7,18 @@ const (
 )
 
 type CmdUmbrellaOutReqPkt struct{
-	//EquipmentSn string
-	ChannelNum uint8
 	//session info
 	SeqId uint8
+	//EquipmentSn string
+	ChannelNum uint8
 }
 
 type CmdUmbrellaOutRspPkt struct{
-	//len 8
-	UmbrellaSn string
-	Status uint8
 	//session info
 	SeqId uint8
+	Status uint8
+	//len 8
+	UmbrellaSn string
 }
 
 // Pack packs the CmdActiveTestReqPkt to bytes stream for client side.
@@ -60,7 +60,7 @@ func (p *CmdUmbrellaOutRspPkt) Pack(seqId uint8) ([]byte, error) {
 	var w = newPacketWriter(pktLen)
 
 	// Pack header
-	w.WriteByte(0x05)
+	w.WriteByte(0x0D)
 	w.WriteByte(byte(CMD_UMBRELLA_OUT_RESP))
 	w.WriteByte(seqId)
 

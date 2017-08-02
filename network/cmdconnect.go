@@ -16,16 +16,15 @@ const(
 
 //CmdConnectReqPkt is the connect request packet
 type CmdConnectReqPkt struct {
-	EquipmentSn string
-
 	//session info
 	SeqId uint8
+	EquipmentSn string
 }
 
 type CmdConnectRspPkt struct {
-	Status uint8
 	//session info
 	SeqId uint8
+	Status uint8
 }
 
 // Pack packs the CmdActiveTestReqPkt to bytes stream for client side.

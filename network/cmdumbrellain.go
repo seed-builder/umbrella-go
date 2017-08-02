@@ -2,23 +2,23 @@ package network
 
 
 const (
-	CmdUmbrellaInReqPktLen uint32 = 5+7
-	CmdUmbrellaInRspPktLen uint32 = 5
+	CmdUmbrellaInReqPktLen uint32 = 5+8
+	CmdUmbrellaInRspPktLen uint32 = 5+1
 
 	//UmbrellaSnLen int = 7
 )
 
 type CmdUmbrellaInReqPkt struct{
-	ChannelNum uint8
-	//7字节
-	UmbrellaSn string
-
 	SeqId uint8
+	ChannelNum uint8
+	//8字节
+	UmbrellaSn string
 }
 
 type CmdUmbrellaInRspPkt struct{
-	Status uint8
 	SeqId uint8
+	ChannelNum uint8
+	Status uint8
 }
 
 // Pack packs the CmdActiveTestReqPkt to bytes stream for client side.
@@ -28,7 +28,7 @@ func (p *CmdUmbrellaInReqPkt) Pack(seqId uint8) ([]byte, error) {
 	var w = newPacketWriter(pktLen)
 
 	// Pack header
-	w.WriteByte(0x0C)
+	w.WriteByte(0x0D)
 	w.WriteByte(byte(CMD_UMBRELLA_IN))
 	w.WriteByte(seqId)
 	p.SeqId = seqId
@@ -64,10 +64,11 @@ func (p *CmdUmbrellaInRspPkt) Pack(seqId uint8) ([]byte, error) {
 	var w = newPacketWriter(pktLen)
 
 	// Pack header
-	w.WriteByte(0x05)
+	w.WriteByte(0x06)
 	w.WriteByte(byte(CMD_UMBRELLA_IN_RESP))
 	w.WriteByte(seqId)
 	p.SeqId = seqId
+	w.WriteByte(p.ChannelNum)
 	w.WriteByte(p.Status)
 
 	return w.Bytes()
@@ -81,6 +82,7 @@ func (p *CmdUmbrellaInRspPkt) Unpack(data []byte) error {
 
 	// Sequence Id
 	p.SeqId = r.ReadByte()
+	p.ChannelNum = r.ReadByte()
 	p.Status = r.ReadByte()
 
 	return r.Error()

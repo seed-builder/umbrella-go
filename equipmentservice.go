@@ -166,6 +166,7 @@ func (es *EquipmentService) HandleUmbrellaCheck(r *network.Response, p *network.
 	resp := r.Packer.(*network.CmdUmbrellaCheckRspPkt)
 	umbrella := models.Umbrella{}
 	resp.Status = umbrella.Check(req.UmbrellaSn)
+	resp.ChannelNum = req.ChannelNum
 	return true, nil
 }
 
