@@ -182,8 +182,10 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 	}
 
 	//totalLen := uint8(leftData[1])
+	//seq id
+	seqId := uint8(leftData[2])
 	// Command_Id
-	commandId := CommandId(leftData[2])
+	commandId := CommandId(leftData[3])
 
 	log.Printf("receive data total len: %d,  command id : %x \n", len, commandId)
 	// The left packet data (start from seqId in header).
@@ -191,28 +193,44 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 	var p Packer
 	switch commandId {
 	case CMD_CONNECT:
-		p = &CmdConnectReqPkt{}
+		p = &CmdConnectReqPkt{
+			SeqId: seqId,
+		}
 	case CMD_CONNECT_RESP:
-		p = &CmdConnectRspPkt{}
+		p = &CmdConnectRspPkt{
+			SeqId: seqId,
+		}
 	case CMD_UMBRELLA_OUT:
-		p = &CmdUmbrellaOutReqPkt{}
+		p = &CmdUmbrellaOutReqPkt{
+			SeqId: seqId,
+		}
 	case CMD_UMBRELLA_OUT_RESP:
-		p = &CmdUmbrellaOutRspPkt{}
+		p = &CmdUmbrellaOutRspPkt{
+			SeqId: seqId,
+		}
 	case CMD_UMBRELLA_IN:
-		p = &CmdUmbrellaInReqPkt{}
+		p = &CmdUmbrellaInReqPkt{
+			SeqId: seqId,
+		}
 	case CMD_UMBRELLA_IN_RESP:
-		p = &CmdUmbrellaInRspPkt{}
+		p = &CmdUmbrellaInRspPkt{
+			SeqId: seqId,
+		}
 	case CMD_ACTIVE_TEST:
-		p = &CmdActiveTestReqPkt{}
+		p = &CmdActiveTestReqPkt{
+			SeqId: seqId,
+		}
 	case CMD_ACTIVE_TEST_RESP:
-		p = &CmdActiveTestRspPkt{}
+		p = &CmdActiveTestRspPkt{
+			SeqId: seqId,
+		}
 
 	default:
 		p = nil
 		return nil, ErrCommandIdNotSupported
 	}
-	if (len-2) > 3 {
-		err = p.Unpack(leftData[3:len-2])
+	if (len-2) > 4 {
+		err = p.Unpack(leftData[4:len-2])
 		if err != nil {
 			return nil, err
 		}

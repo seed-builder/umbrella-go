@@ -40,7 +40,7 @@ func startAClient(idx int, sn string) {
 	defer wg.Done()
 	defer c.Disconnect()
 	//119.23.214.176
-	err := c.Connect(":7777", sn, connectTimeout)
+	err := c.Connect("119.23.214.176:7777", sn, connectTimeout)
 	if err != nil {
 		log.Printf("client %d: connect error: %s.", idx, err)
 		return
@@ -81,7 +81,7 @@ func startAClient(idx int, sn string) {
 		case *network.CmdActiveTestReqPkt:
 			log.Printf("client %d: receive a network active request: %v.", idx, p)
 			rsp := &network.CmdActiveTestRspPkt{}
-			err := c.SendRspPkt(rsp, 0)
+			err := c.SendRspPkt(rsp, p.SeqId)
 			if err != nil {
 				log.Printf("client %d: send network active response error: %s.", idx, err)
 				break
@@ -128,7 +128,7 @@ func main() {
 		"M200705kxra",
 		"E198408egtb",
 	}
-	for i := 0; i < 1; i++ {
+	for i := 1; i < 2; i++ {
 		wg.Add(1)
 		go startAClient(i + 1, sn[i])
 	}

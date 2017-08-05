@@ -27,6 +27,7 @@ type Umbrella struct {
 	Name string
 	Color string
 	Logo string
+	PriceId uint
 }
 
 func NewUmbrella(data map[string]interface{}) *Umbrella  {

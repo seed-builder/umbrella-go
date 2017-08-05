@@ -53,9 +53,16 @@ func (m *CustomerHire) Create(equipment *Equipment, umbrella *Umbrella, customer
 	m.CustomerId = customerId
 	m.CreatorId = customerId
 	m.HireAt = time.Now()
-	m.UmbrellaId = m.ID
+	m.UmbrellaId = umbrella.ID
 	m.HireEquipmentId = equipment.ID
 	m.HireSiteId = equipment.SiteId
 	m.Status = UmbrellaHireStatusInit
+	if umbrella.PriceId == 0 {
+		price := &Price{}
+		price.Query().First(price, "is_default = ?", 1)
+		if price.ID > 0 {
+			m.DepositAmt = price.DepositCash
+		}
+	}
 	return m.Save()
 }

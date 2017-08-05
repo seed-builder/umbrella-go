@@ -34,10 +34,11 @@ func (p *CmdConnectReqPkt) Pack(seqId uint8) ([]byte, error) {
 	var w = newPacketWriter(pktLen)
 
 	// Pack header
-	w.WriteByte(0x0B)
-	w.WriteByte(byte(CMD_CONNECT))
+	w.WriteByte(0x0F)
 	w.WriteByte(seqId)
 	p.SeqId = seqId
+	w.WriteByte(byte(CMD_CONNECT))
+
 	w.WriteFixedSizeString(p.EquipmentSn, EquipmentSnLen)
 
 	return w.Bytes()
@@ -48,9 +49,8 @@ func (p *CmdConnectReqPkt) Pack(seqId uint8) ([]byte, error) {
 // CmdActiveTestReqPkt struct.
 func (p *CmdConnectReqPkt) Unpack(data []byte) error {
 	var r = newPacketReader(data)
-
 	// Sequence Id
-	p.SeqId = r.ReadByte()
+	//p.SeqId = r.ReadByte()
 	sn := r.ReadCString(EquipmentSnLen)
 	p.EquipmentSn = string(sn)
 	return r.Error()
@@ -63,10 +63,10 @@ func (p *CmdConnectRspPkt) Pack(seqId uint8) ([]byte, error) {
 	var w = newPacketWriter(pktLen)
 
 	w.WriteByte(0x05)
-	w.WriteByte(byte(CMD_CONNECT_RESP))
-
 	w.WriteByte(seqId)
 	p.SeqId = seqId
+	w.WriteByte(byte(CMD_CONNECT_RESP))
+
 	w.WriteByte(p.Status)
 
 	return w.Bytes()
@@ -79,7 +79,7 @@ func (p *CmdConnectRspPkt) Unpack(data []byte) error {
 	var r = newPacketReader(data)
 
 	// Sequence Id
-	p.SeqId = r.ReadByte()
+	//p.SeqId = r.ReadByte()
 	p.Status = r.ReadByte()
 	return r.Error()
 }

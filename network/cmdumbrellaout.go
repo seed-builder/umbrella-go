@@ -29,9 +29,10 @@ func (p *CmdUmbrellaOutReqPkt) Pack(seqId uint8) ([]byte, error) {
 
 	// Pack header
 	w.WriteByte(0x05)
-	w.WriteByte(byte(CMD_UMBRELLA_OUT))
 	w.WriteByte(seqId)
 	p.SeqId = seqId
+	w.WriteByte(byte(CMD_UMBRELLA_OUT))
+
 	//w.WriteFixedSizeString(p.EquipmentSn, 11)
 	w.WriteByte(p.ChannelNum)
 
@@ -45,7 +46,7 @@ func (p *CmdUmbrellaOutReqPkt) Unpack(data []byte) error {
 	var r = newPacketReader(data)
 
 	// Sequence Id
-	p.SeqId = r.ReadByte()
+	//p.SeqId = r.ReadByte()
 	//sn := r.ReadCString(11)
 	//p.EquipmentSn = string(sn)
 	p.ChannelNum = r.ReadByte()
@@ -61,10 +62,11 @@ func (p *CmdUmbrellaOutRspPkt) Pack(seqId uint8) ([]byte, error) {
 
 	// Pack header
 	w.WriteByte(0x0D)
-	w.WriteByte(byte(CMD_UMBRELLA_OUT_RESP))
 	w.WriteByte(seqId)
-
 	p.SeqId = seqId
+
+	w.WriteByte(byte(CMD_UMBRELLA_OUT_RESP))
+
 	w.WriteByte(p.Status)
 	w.WriteFixedSizeString(p.UmbrellaSn, UmbrellaSnLen)
 
@@ -78,7 +80,7 @@ func (p *CmdUmbrellaOutRspPkt) Unpack(data []byte) error {
 	var r = newPacketReader(data)
 
 	// Sequence Id
-	p.SeqId = r.ReadByte()
+	//p.SeqId = r.ReadByte()
 	p.Status = r.ReadByte()
 	sn := r.ReadCString(UmbrellaSnLen)
 	p.UmbrellaSn = string(sn)

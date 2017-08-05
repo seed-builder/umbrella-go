@@ -165,10 +165,10 @@ func (c *conn) readPacket() (*Response, error) {
 		rsp = &Response{
 			Packet: pkt,
 			Packer: &CmdActiveTestRspPkt{},
-			SeqId: 0,
+			SeqId: p.SeqId,
 		}
 		c.server.ErrorLog.Printf("receive a cmd active request from %v[%d]\n",
-			c.Conn.RemoteAddr(), 0)
+			c.Conn.RemoteAddr(), p.SeqId)
 
 	case *CmdActiveTestRspPkt:
 		pkt = &Packet{
@@ -180,7 +180,7 @@ func (c *conn) readPacket() (*Response, error) {
 			Packet: pkt,
 		}
 		c.server.ErrorLog.Printf("receive a cmd active response from %v[%d]\n",
-			c.Conn.RemoteAddr(), 0)
+			c.Conn.RemoteAddr(), p.SeqId)
 
 	default:
 		return nil, NewOpError(ErrUnsupportedPkt,
@@ -234,7 +234,7 @@ func startActiveTest(c *conn) {
 				}
 				// send a active test packet to peer, increase the active test counter
 				p := &CmdActiveTestReqPkt{}
-				err := c.Conn.SendPkt(p, 0)
+				err := c.Conn.SendPkt(p, <- c.SeqId)
 				c.server.ErrorLog.Printf("sending active test to %v \n", c.Conn.RemoteAddr())
 				if err != nil {
 					c.server.ErrorLog.Printf("send cmd active test request to %v error: %v", c.Conn.RemoteAddr(), err)
