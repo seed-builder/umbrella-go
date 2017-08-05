@@ -10,13 +10,15 @@ import (
 	"umbrella/models"
 	"fmt"
 	"umbrella/utilities"
+	//"strconv"
+	"strconv"
 )
 
 //EquipmentService is 单台设备管理服务，
 type EquipmentService struct {
 	EquipmentConns map[string]*network.Conn
 	WaitingHire map[string]uint
-	Requests map[uint8]chan string
+	Requests map[uint8]chan int32
 	Redoes map[uint8]*network.Packer
 }
 
@@ -85,7 +87,7 @@ func (es *EquipmentService) OpenChannel(equipmentSn string) (channelNum uint8, s
 
 			_, ok := es.Requests[seqId]
 			if !ok {
-				es.Requests[seqId] = make(chan string)
+				es.Requests[seqId] = make(chan int32)
 			}
 			return channelNum , seqId, nil
 		}
@@ -150,7 +152,8 @@ func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Pac
 		return false, nil
 	}else{
 		umbrella := models.Umbrella{}
-		resp.Status = umbrella.InEquipment(r.Packet.Conn.Equipment, req.UmbrellaSn, req.ChannelNum)
+		sn := strconv.Itoa(int(req.UmbrellaSn))
+		resp.Status = umbrella.InEquipment(r.Packet.Conn.Equipment, sn, req.ChannelNum)
 		return true, nil
 	}
 }
@@ -161,7 +164,7 @@ func (es *EquipmentService) HandleUmbrellaOutRsp(r *network.Response, p *network
 	if ok {
 		c, o := es.Requests[rsp.SeqId]
 		if o {
-			log.Println("close request seqid = ", rsp.SeqId)
+			log.Println("HandleUmbrellaOutRsp UmbrellaSn = ", rsp.UmbrellaSn)
 			if rsp.Status == 1 {
 				c <- rsp.UmbrellaSn
 			}else{
@@ -188,7 +191,7 @@ var EquipmentSrv *EquipmentService
 func init()  {
 	EquipmentSrv = &EquipmentService{
 		EquipmentConns: make(map[string]*network.Conn),
-		Requests: make(map[uint8]chan string),
+		Requests: make(map[uint8]chan int32),
 	}
 }
 

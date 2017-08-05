@@ -1,8 +1,9 @@
 package network
 
+import "encoding/binary"
 
 const (
-	CmdUmbrellaInReqPktLen uint32 = 5+8
+	CmdUmbrellaInReqPktLen uint32 = 5+4
 	CmdUmbrellaInRspPktLen uint32 = 5+1
 
 	//UmbrellaSnLen int = 7
@@ -11,8 +12,8 @@ const (
 type CmdUmbrellaInReqPkt struct{
 	SeqId uint8
 	ChannelNum uint8
-	//8字节
-	UmbrellaSn string
+	//4字节
+	UmbrellaSn int32
 }
 
 type CmdUmbrellaInRspPkt struct{
@@ -28,15 +29,15 @@ func (p *CmdUmbrellaInReqPkt) Pack(seqId uint8) ([]byte, error) {
 	var w = newPacketWriter(pktLen)
 
 	// Pack header
-	w.WriteByte(0x0D)
+	w.WriteByte(byte(CmdUmbrellaInReqPktLen))
 	w.WriteByte(seqId)
 	p.SeqId = seqId
 	w.WriteByte(byte(CMD_UMBRELLA_IN))
 
 	//w.WriteFixedSizeString(p.EquipmentSn, 11)
 	w.WriteByte(p.ChannelNum)
-	w.WriteFixedSizeString(p.UmbrellaSn, UmbrellaSnLen)
-
+	//w.WriteFixedSizeString(p.UmbrellaSn, UmbrellaSnLen)
+	w.WriteInt(binary.LittleEndian, p.UmbrellaSn)
 	return w.Bytes()
 }
 
@@ -51,9 +52,9 @@ func (p *CmdUmbrellaInReqPkt) Unpack(data []byte) error {
 	//sn := r.ReadCString(11)
 	//p.EquipmentSn = string(sn)
 	p.ChannelNum = r.ReadByte()
-	sn := r.ReadCString(UmbrellaSnLen)
-	p.UmbrellaSn = string(sn)
-
+	//sn := r.ReadCString(UmbrellaSnLen)
+	//p.UmbrellaSn = string(sn)
+	r.ReadInt(binary.LittleEndian, &p.UmbrellaSn)
 	return r.Error()
 }
 
@@ -65,7 +66,7 @@ func (p *CmdUmbrellaInRspPkt) Pack(seqId uint8) ([]byte, error) {
 	var w = newPacketWriter(pktLen)
 
 	// Pack header
-	w.WriteByte(0x06)
+	w.WriteByte(byte(CmdUmbrellaInRspPktLen))
 	w.WriteByte(seqId)
 	p.SeqId = seqId
 	w.WriteByte(byte(CMD_UMBRELLA_IN_RESP))

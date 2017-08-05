@@ -26,7 +26,8 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 				if conn, ok := EquipmentSrv.EquipmentConns[sn]; ok {
 					conn.Equipment.OutChannel(channelNum)
 					umbrella := &models.Umbrella{}
-					umbrella.OutEquipment(conn.Equipment, umbrellaSn, channelNum)
+					sn := strconv.Itoa(int(umbrellaSn))
+					umbrella.OutEquipment(conn.Equipment, sn, channelNum)
 				}
 				c.JSON(http.StatusOK, gin.H{"success": true, "equipment_sn": sn, "channel_num": channelNum, "umbrella_sn": umbrellaSn,  "err": "" })
 				return
@@ -48,7 +49,9 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 				if conn, ok := EquipmentSrv.EquipmentConns[sn]; ok {
 					conn.Equipment.OutChannel(channelNum)
 					umbrella := &models.Umbrella{}
-					umbrella.OutEquipment(conn.Equipment, umbrellaSn, channelNum)
+					//umbrella.OutEquipment(conn.Equipment, umbrellaSn, channelNum)
+					usn := strconv.Itoa(int(umbrellaSn))
+					umbrella.OutEquipment(conn.Equipment, usn, channelNum)
 					hire := &models.CustomerHire{}
 					cid, _ := strconv.ParseUint(customerId, 10, 32)
 					hire.Create(conn.Equipment, umbrella, uint(cid))

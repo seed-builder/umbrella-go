@@ -1,9 +1,11 @@
 package network
 
+import "encoding/binary"
+
 const (
 	CmdUmbrellaOutReqPktLen uint32 = 4 + 1
-	CmdUmbrellaOutRspPktLen uint32 = 4 + 1 + 8
-	UmbrellaSnLen int = 8
+	CmdUmbrellaOutRspPktLen uint32 = 4 + 1 + 4
+	UmbrellaSnLen int = 4
 )
 
 type CmdUmbrellaOutReqPkt struct{
@@ -17,8 +19,8 @@ type CmdUmbrellaOutRspPkt struct{
 	//session info
 	SeqId uint8
 	Status uint8
-	//len 8
-	UmbrellaSn string
+	//len 4
+	UmbrellaSn int32
 }
 
 // Pack packs the CmdActiveTestReqPkt to bytes stream for client side.
@@ -28,7 +30,7 @@ func (p *CmdUmbrellaOutReqPkt) Pack(seqId uint8) ([]byte, error) {
 	var w = newPacketWriter(pktLen)
 
 	// Pack header
-	w.WriteByte(0x05)
+	w.WriteByte(byte(CmdUmbrellaOutReqPktLen))
 	w.WriteByte(seqId)
 	p.SeqId = seqId
 	w.WriteByte(byte(CMD_UMBRELLA_OUT))
@@ -61,14 +63,14 @@ func (p *CmdUmbrellaOutRspPkt) Pack(seqId uint8) ([]byte, error) {
 	var w = newPacketWriter(pktLen)
 
 	// Pack header
-	w.WriteByte(0x0D)
+	w.WriteByte(byte(CmdUmbrellaOutRspPktLen))
 	w.WriteByte(seqId)
 	p.SeqId = seqId
 
 	w.WriteByte(byte(CMD_UMBRELLA_OUT_RESP))
 
 	w.WriteByte(p.Status)
-	w.WriteFixedSizeString(p.UmbrellaSn, UmbrellaSnLen)
+	w.WriteInt(binary.LittleEndian, p.UmbrellaSn)
 
 	return w.Bytes()
 }
@@ -82,7 +84,9 @@ func (p *CmdUmbrellaOutRspPkt) Unpack(data []byte) error {
 	// Sequence Id
 	//p.SeqId = r.ReadByte()
 	p.Status = r.ReadByte()
-	sn := r.ReadCString(UmbrellaSnLen)
-	p.UmbrellaSn = string(sn)
+	//sn := r.ReadCString(UmbrellaSnLen)
+	//p.UmbrellaSn = string(sn)
+	r.ReadInt(binary.LittleEndian, &p.UmbrellaSn)
+
 	return r.Error()
 }

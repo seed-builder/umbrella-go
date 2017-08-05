@@ -56,7 +56,7 @@ func (m *CustomerHire) Create(equipment *Equipment, umbrella *Umbrella, customer
 	m.UmbrellaId = umbrella.ID
 	m.HireEquipmentId = equipment.ID
 	m.HireSiteId = equipment.SiteId
-	m.Status = UmbrellaHireStatusInit
+	m.Status = UmbrellaHireStatusNormal
 	if umbrella.PriceId == 0 {
 		price := &Price{}
 		price.Query().First(price, "is_default = ?", 1)

@@ -53,7 +53,7 @@ func (m *Equipment) Query() *gorm.DB{
 }
 
 func (m *Equipment) InitChannel() {
-	m.ChannelCache = make(map[uint8]uint8)
+	m.ChannelCache = make(map[uint8]uint8, m.Channels)
 	umbrella := Umbrella{}
 	for i := uint8(1); i <= m.Channels; i ++ {
 		var count uint8
@@ -63,8 +63,9 @@ func (m *Equipment) InitChannel() {
 }
 
 //ChooseChannel 选择伞保有量最多的通道
-func (m *Equipment) ChooseChannel() (channelNum uint8) {
+func (m *Equipment) ChooseChannel() uint8 {
 	var len uint8
+	channelNum := uint8(1)
 	for n, l :=  range m.ChannelCache {
 		if n != m.UsedChannelNum && l > len {
 			channelNum = n

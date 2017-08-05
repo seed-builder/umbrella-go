@@ -13,8 +13,8 @@ const (
 )
 
 var umbrellaSns = []string{
-	"S125947",
-	"S232774",
+	"1234",
+	"123456",
 	"S037362",
 	"S540212",
 	"S107023",
@@ -97,7 +97,7 @@ func startAClient(idx int, sn string) {
 			log.Printf("client %d: receive a network open channel request: %v.", idx, p)
 			rsp := &network.CmdUmbrellaOutRspPkt{
 				Status: 1,
-				UmbrellaSn: "12345678",
+				UmbrellaSn: 1234578,
 			}
 			time.Sleep(6*time.Second)
 			err := c.SendRspPkt(rsp, p.SeqId)
