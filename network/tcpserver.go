@@ -182,6 +182,19 @@ func (c *conn) readPacket() (*Response, error) {
 		c.server.ErrorLog.Printf("receive a cmd active response from %v[%d]\n",
 			c.Conn.RemoteAddr(), p.SeqId)
 
+	case *CmdIllegalRspPkt:
+		pkt = &Packet{
+			Packer: p,
+			Conn:   c.Conn,
+		}
+
+		rsp = &Response{
+			Packet: pkt,
+			Packer: p,
+		}
+		c.server.ErrorLog.Printf("receive a illegal cmd request from %v[%d]\n",
+			c.Conn.RemoteAddr(), p.SeqId)
+
 	default:
 		return nil, NewOpError(ErrUnsupportedPkt,
 			fmt.Sprintf("readPacket: receive unsupported packet type: %#v", p))

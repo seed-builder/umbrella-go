@@ -9,6 +9,7 @@ import (
 	"errors"
 	"umbrella/models"
 	"fmt"
+	"umbrella/utilities"
 )
 
 //EquipmentService is 单台设备管理服务，
@@ -33,7 +34,7 @@ func (es *EquipmentService) ListenAndServe(addr string, ver  network.Type, t tim
 		network.HandlerFunc(es.HandleConnect),
 		network.HandlerFunc(es.HandleUmbrellaIn),
 		network.HandlerFunc(es.HandleUmbrellaOutRsp),
-		//network.HandlerFunc(es.HandleOpenChannelRsp),
+		network.HandlerFunc(es.HandleCmdIllegalRsp),
 	}
 
 	var handler network.Handler
@@ -114,7 +115,7 @@ func (es *EquipmentService) HandleConnect(r *network.Response, p *network.Packet
 		return true, nil
 	}
 	resp := r.Packer.(*network.CmdConnectRspPkt)
-	resp.Status = network.ConnectFail
+	resp.Status = utilities.RspStatusFail
 	if req.EquipmentSn != "" {
 		eq := models.Equipment{}
 		eq.Query().First(&eq, "sn = ?", req.EquipmentSn)
@@ -124,10 +125,10 @@ func (es *EquipmentService) HandleConnect(r *network.Response, p *network.Packet
 			r.Packet.Conn.SetState( network.CONN_AUTHOK )
 			r.Packet.Conn.SetEquipment(&eq)
 			EquipmentSrv.RegisterConn(req.EquipmentSn, r.Packet.Conn)
-			resp.Status = network.ConnectSuccess
+			resp.Status = utilities.RspStatusSuccess
 			l.Printf("connect success, sn: %s", req.EquipmentSn)
 		}else{
-			resp.Status = network.ConnectWrongSn
+			resp.Status = utilities.RspStatusEquipmentSnIllegal
 			l.Printf("connect fail, sn: %s", req.EquipmentSn)
 		}
 	}
@@ -142,14 +143,16 @@ func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Pac
 		// go on to next handler
 		return true, nil
 	}
-	if r.Packet.Conn.State != network.CONN_AUTHOK {
-		return false, network.ErrConnNeedAuth
-	}
 	l.Printf("handle the umbrella in request , %v", req)
 	resp := r.Packer.(*network.CmdUmbrellaInRspPkt)
-	umbrella := models.Umbrella{}
-	resp.Status = umbrella.InEquipment(r.Packet.Conn.Equipment, req.UmbrellaSn, req.ChannelNum)
-	return true, nil
+	if r.Packet.Conn.State != network.CONN_AUTHOK {
+		resp.Status = utilities.RspStatusNeedAuth
+		return false, network.ErrConnNeedAuth
+	}else{
+		umbrella := models.Umbrella{}
+		resp.Status = umbrella.InEquipment(r.Packet.Conn.Equipment, req.UmbrellaSn, req.ChannelNum)
+		return true, nil
+	}
 }
 
 //HandleOpenChannelRsp
@@ -169,6 +172,16 @@ func (es *EquipmentService) HandleUmbrellaOutRsp(r *network.Response, p *network
 	}
 	return true, nil
 }
+
+//HandleCmdIllegalRsp
+func (es *EquipmentService) HandleCmdIllegalRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error) {
+	resp, ok := r.Packer.(*network.CmdIllegalRspPkt)
+	if ok {
+		resp.Status = utilities.RspStatusCmdIllegal
+	}
+	return false, nil
+}
+
 
 var EquipmentSrv *EquipmentService
 

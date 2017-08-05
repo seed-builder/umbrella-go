@@ -191,6 +191,7 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 	// The left packet data (start from seqId in header).
 
 	var p Packer
+	canUnpack := true
 	switch commandId {
 	case CMD_CONNECT:
 		p = &CmdConnectReqPkt{
@@ -226,10 +227,13 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 		}
 
 	default:
-		p = nil
-		return nil, ErrCommandIdNotSupported
+		p = &CmdIllegalRspPkt{
+			SeqId: seqId,
+		}
+		canUnpack = false
+		//return nil, ErrCommandIdNotSupported
 	}
-	if (len-2) > 4 {
+	if canUnpack && (len-2) > 4 {
 		err = p.Unpack(leftData[4:len-2])
 		if err != nil {
 			return nil, err
