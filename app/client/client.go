@@ -40,7 +40,7 @@ func startAClient(idx int, sn string) {
 	defer wg.Done()
 	defer c.Disconnect()
 	//119.23.214.176
-	err := c.Connect("119.23.214.176:7777", sn, connectTimeout)
+	err := c.Connect(":7777", sn, connectTimeout)
 	if err != nil {
 		log.Printf("client %d: connect error: %s.", idx, err)
 		return

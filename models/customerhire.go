@@ -8,7 +8,7 @@ import (
 
 //(1-初始(未支付押金)，2-租借中, 3-还伞完毕，待支付租金 4-已完成, 5-逾期未归还)
 const(
-	UmbrellaHireStatusUnknown int32 = iota
+	UmbrellaHireStatusUnknown uint = iota
 	UmbrellaHireStatusInit
 	UmbrellaHireStatusNormal
 	UmbrellaHireStatusPaying
@@ -28,11 +28,11 @@ type CustomerHire struct {
 	ReturnEquipmentId uint
 	ReturnSiteId uint
 	ReturnAt time.Time
-	ExpireDay int32
+	ExpireDay uint
 	ExpiredAt time.Time
-	HireDay int32
+	HireDay uint
 	HireAmt float64
-	Status int32
+	Status uint
 
 	HireEquipment Equipment `gorm:"ForeignKey:HireEquipmentId"`
 	ReturnEquipment Equipment `gorm:"ForeignKey:ReturnEquipmentId"`
@@ -62,6 +62,8 @@ func (m *CustomerHire) Create(equipment *Equipment, umbrella *Umbrella, customer
 		price.Query().First(price, "is_default = ?", 1)
 		if price.ID > 0 {
 			m.DepositAmt = price.DepositCash
+			m.ExpireDay = price.HireExpireDays
+			m.ExpiredAt =  time.Now().Add(time.Hour * 24 * time.Duration(price.HireExpireDays))
 		}
 	}
 	return m.Save()
