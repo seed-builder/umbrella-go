@@ -51,11 +51,11 @@ func (cli *Client) Connect(servAddr, sn string, timeout time.Duration) error {
 		return err
 	}
 	log.Println("send connect request to server, sn = ", sn )
-	p, err := cli.conn.RecvAndUnpackPkt(0)
+	ps, err := cli.conn.RecvAndUnpackPkt(0)
 	if err != nil {
 		return err
 	}
-
+	p := ps[0]
 	var ok bool
 	var status uint8
 
@@ -93,6 +93,6 @@ func (cli *Client) SendRspPkt(packet Packer, seqId uint8) error {
 }
 
 // RecvAndUnpackPkt receives cmpp byte stream, and unpack it to some cmpp packet structure.
-func (cli *Client) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
+func (cli *Client) RecvAndUnpackPkt(timeout time.Duration) ([]Packer, error) {
 	return cli.conn.RecvAndUnpackPkt(timeout)
 }

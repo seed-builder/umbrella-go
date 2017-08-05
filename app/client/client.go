@@ -69,13 +69,13 @@ func startAClient(idx int, sn string) {
 		}
 
 		// recv packets
-		i, err := c.RecvAndUnpackPkt(time.Second * 10)
+		ps, err := c.RecvAndUnpackPkt(time.Second * 10)
 		if err != nil {
 			//log.Printf("client %d: client read and unpack pkt error: %s.", idx, err)
 			//break
 			continue
 		}
-
+		i := ps[0]
 		switch p := i.(type) {
 
 		case *network.CmdActiveTestReqPkt:

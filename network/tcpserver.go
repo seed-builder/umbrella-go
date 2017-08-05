@@ -49,7 +49,7 @@ func (c *conn) serve() {
 		default:
 		}
 
-		r, err := c.readPacket()
+		rs, err := c.readPacket()
 		if err != nil {
 			c.server.ErrorLog.Printf("receiving data: %v \n", err)
 			if e, ok := err.(net.Error); ok && e.Timeout() {
@@ -62,25 +62,38 @@ func (c *conn) serve() {
 			//continue
 		}
 
-		_, err = c.server.Handler.ServeHandle(r, r.Packet, c.server.ErrorLog)
-		if err1 := c.finishPacket(r); err1 != nil {
-			break
-		}
+		c.server.ErrorLog.Printf("readPacket response has : %d \n", len(rs))
+		for _, r := range rs {
+			_, err = c.server.Handler.ServeHandle(r, r.Packet, c.server.ErrorLog)
+			if err1 := c.finishPacket(r); err1 != nil {
+				break
+			}
 
-		if err != nil {
-			break
+			if err != nil {
+				break
+			}
 		}
 	}
 }
 
-func (c *conn) readPacket() (*Response, error) {
+func (c *conn) readPacket() ([]*Response, error) {
 	readTimeout := time.Second * 5
-	i, err := c.Conn.RecvAndUnpackPkt(readTimeout)
+	packers, err := c.Conn.RecvAndUnpackPkt(readTimeout)
 	if err != nil {
 		return nil, err
 	}
 	//typ := c.server.Typ
+	var rsps []*Response
+	for _, p := range packers {
+		r, e := c.parseResponse(p)
+		if e == nil {
+			rsps = append(rsps, r)
+		}
+	}
+	return rsps, nil
+}
 
+func (c *conn) parseResponse(i Packer) (*Response, error)  {
 	var pkt *Packet
 	var rsp *Response
 	switch p := i.(type) {
@@ -142,20 +155,20 @@ func (c *conn) readPacket() (*Response, error) {
 		c.server.ErrorLog.Printf("receive a cmd umbrella in request from %v[%d]\n",
 			c.Conn.RemoteAddr(), p.SeqId)
 
-	//case *CmdUmbrellaOutReqPkt:
-	//	pkt = &Packet{
-	//		Packer: p,
-	//		Conn:   c.Conn,
-	//	}
-	//	rsp = &Response{
-	//		Packet: pkt,
-	//		Packer: &CmdUmbrellaOutRspPkt{
-	//			SeqId: p.SeqId,
-	//		},
-	//		SeqId: p.SeqId,
-	//	}
-	//	c.server.ErrorLog.Printf("receive a cmd umbrella out request from %v[%d]\n",
-	//		c.Conn.RemoteAddr(), p.SeqId)
+		//case *CmdUmbrellaOutReqPkt:
+		//	pkt = &Packet{
+		//		Packer: p,
+		//		Conn:   c.Conn,
+		//	}
+		//	rsp = &Response{
+		//		Packet: pkt,
+		//		Packer: &CmdUmbrellaOutRspPkt{
+		//			SeqId: p.SeqId,
+		//		},
+		//		SeqId: p.SeqId,
+		//	}
+		//	c.server.ErrorLog.Printf("receive a cmd umbrella out request from %v[%d]\n",
+		//		c.Conn.RemoteAddr(), p.SeqId)
 
 	case *CmdActiveTestReqPkt:
 		pkt = &Packet{

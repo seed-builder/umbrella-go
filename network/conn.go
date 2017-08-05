@@ -146,7 +146,7 @@ const (
 )
 
 // RecvAndUnpackPkt receives CMD byte stream, and unpack it to some CMD packet structure.
-func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
+func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) ([]Packer, error) {
 	if c.State == CONN_CLOSED {
 		return nil, ErrConnIsClosed
 	}
@@ -158,36 +158,71 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 	}
 
 	leftData := make([]byte, defaultReadBufferSize)
-	len, err := c.Conn.Read(leftData) //io.ReadFull(c.Conn, leftData)
+	length, err := c.Conn.Read(leftData) //io.ReadFull(c.Conn, leftData)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("receive client data len = %d, data=%x . \n", len, leftData[:len])
+	log.Printf(" RecvAndUnpackPkt receive client data len = %d, data=%x . \n", length, leftData[:length])
 
-	cmdHead := leftData[0]
-	cmdFoot := leftData[len - 1]
-	if cmdHead != CMDHEAD || cmdFoot != CMDFOOT {
-		//log.Printf("receive client data len = %d, data=%v .", len, leftData[:len])
-		return nil, ErrCmdIllegal
+	cmds := c.ParsePkt(length, leftData)
+	num := len(cmds)
+	log.Printf("ParsePkt cmd len = %d \n.", num)
+	var packers []Packer
+	if num > 0 {
+		for _, cmd := range cmds {
+			log.Printf("ParsePkt cmd data = %x .\n", cmd)
+			p, err := c.CheckAndUnpackPkt(cmd)
+			if err == nil {
+				packers = append(packers, p)
+			}else{
+				log.Printf("CheckAndUnpackPkt err = %v .\n", err)
+			}
+		}
 	}
+	return packers, nil
+}
 
-	data := leftData[1:len-2]
+func (c *Conn) ParsePkt(len int, data []byte) [][]byte {
+	var result [][]byte
+	var head ,foot , complete int
+	for i := 0 ; i < len; i ++ {
+		d := data[i]
+		if d == CMDHEAD {
+			head = i
+			complete ++
+		}
+		if d == CMDFOOT {
+			foot = i
+			complete ++
+		}
+		if complete == 2 && foot > head {
+			result = append(result, data[head+1:foot])
+			head=0
+			foot=0
+			complete = 0
+		}
+	}
+	return result
+}
+
+func (c *Conn) CheckAndUnpackPkt(leftData []byte) (Packer, error)  {
+	length := len(leftData)
+	data := leftData[:length - 1]
 	var sum uint8
 	for _, d := range data {
 		sum += uint8(d)
 	}
-	crc := uint8(leftData[len - 2])
+	crc := uint8(leftData[length - 1])
 	if crc != sum {
 		return nil, ErrCmdIllegal
 	}
-
 	//totalLen := uint8(leftData[1])
 	//seq id
-	seqId := uint8(leftData[2])
+	seqId := uint8(leftData[1])
 	// Command_Id
-	commandId := CommandId(leftData[3])
+	commandId := CommandId(leftData[2])
 
-	log.Printf("receive data total len: %d,  command id : %x \n", len, commandId)
+	log.Printf(" CheckAndUnpackPkt receive data total len: %d,  command id : %x \n", length, commandId)
 	// The left packet data (start from seqId in header).
 
 	var p Packer
@@ -225,7 +260,6 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 		p = &CmdActiveTestRspPkt{
 			SeqId: seqId,
 		}
-
 	default:
 		p = &CmdIllegalRspPkt{
 			SeqId: seqId,
@@ -233,9 +267,10 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) (interface{}, error) {
 		canUnpack = false
 		//return nil, ErrCommandIdNotSupported
 	}
-	if canUnpack && (len-2) > 4 {
-		err = p.Unpack(leftData[4:len-2])
+	if canUnpack && (length-1) > 3 {
+		err := p.Unpack(leftData[3:length-1])
 		if err != nil {
+			log.Printf(" CheckAndUnpackPkt Unpack data err: %v \n", err)
 			return nil, err
 		}
 	}
