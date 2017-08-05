@@ -135,6 +135,7 @@ func (c *conn) readPacket() (*Response, error) {
 			Packet: pkt,
 			Packer: &CmdUmbrellaInRspPkt{
 				SeqId: p.SeqId,
+				ChannelNum: p.ChannelNum,
 			},
 			SeqId: p.SeqId,
 		}

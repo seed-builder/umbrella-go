@@ -147,7 +147,7 @@ func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Pac
 	resp := r.Packer.(*network.CmdUmbrellaInRspPkt)
 	if r.Packet.Conn.State != network.CONN_AUTHOK {
 		resp.Status = utilities.RspStatusNeedAuth
-		return false, network.ErrConnNeedAuth
+		return false, nil
 	}else{
 		umbrella := models.Umbrella{}
 		resp.Status = umbrella.InEquipment(r.Packet.Conn.Equipment, req.UmbrellaSn, req.ChannelNum)
