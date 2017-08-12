@@ -33,7 +33,7 @@ func (cli *Client) Connect(servAddr, sn string, timeout time.Duration) error {
 	if err != nil {
 		return err
 	}
-	cli.conn = NewConn(conn, cli.typ)
+	cli.conn = NewConn(nil, conn, cli.typ)
 	defer func() {
 		if err != nil {
 			cli.conn.Close()

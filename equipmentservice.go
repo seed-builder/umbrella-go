@@ -126,7 +126,7 @@ func (es *EquipmentService) HandleConnect(r *network.Response, p *network.Packet
 			eq.Online()
 			r.Packet.Conn.SetState( network.CONN_AUTHOK )
 			r.Packet.Conn.SetEquipment(&eq)
-			EquipmentSrv.RegisterConn(req.EquipmentSn, r.Packet.Conn)
+			es.RegisterConn(req.EquipmentSn, r.Packet.Conn)
 			resp.Status = utilities.RspStatusSuccess
 			l.Printf("connect success, sn: %s", req.EquipmentSn)
 		}else{
@@ -184,7 +184,6 @@ func (es *EquipmentService) HandleCmdIllegalRsp(r *network.Response, p *network.
 	}
 	return false, nil
 }
-
 
 var EquipmentSrv *EquipmentService
 

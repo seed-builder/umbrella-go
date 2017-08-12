@@ -84,12 +84,12 @@ func equipmentSrv(){
 	duration := time.Duration(utilities.SysConfig.TcpTestTimeout)* time.Second
 	log.Println("equipmentSrv start serve at addr: ", addr)
 	err := umbrella.EquipmentSrv.ListenAndServe(
-		addr,
-		network.V10,
-		duration,
-		utilities.SysConfig.TcpTestMax,
-		nil,
-	)
+			addr,
+			network.V10,
+			duration,
+			utilities.SysConfig.TcpTestMax,
+			nil,
+		)
 	if err != nil {
 		log.Println("equipment ListenAndServ error:", err)
 	}
