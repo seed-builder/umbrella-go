@@ -1,6 +1,6 @@
 package network
 
-import "encoding/binary"
+import "log"
 
 const (
 	CmdUmbrellaInReqPktLen uint32 = 5+4
@@ -13,7 +13,7 @@ type CmdUmbrellaInReqPkt struct{
 	SeqId uint8
 	ChannelNum uint8
 	//4字节
-	UmbrellaSn int32
+	UmbrellaSn []byte
 }
 
 type CmdUmbrellaInRspPkt struct{
@@ -37,8 +37,13 @@ func (p *CmdUmbrellaInReqPkt) Pack(seqId uint8) ([]byte, error) {
 	//w.WriteFixedSizeString(p.EquipmentSn, 11)
 	w.WriteByte(p.ChannelNum)
 	//w.WriteFixedSizeString(p.UmbrellaSn, UmbrellaSnLen)
-	w.WriteInt(binary.LittleEndian, p.UmbrellaSn)
+	//w.WriteInt(binary.LittleEndian, p.UmbrellaSn)
+	for _, b := range p.UmbrellaSn {
+		w.WriteByte(b)
+	}
+
 	return w.Bytes()
+
 }
 
 // Unpack unpack the binary byte stream to a CmdActiveTestReqPkt variable.
@@ -54,7 +59,11 @@ func (p *CmdUmbrellaInReqPkt) Unpack(data []byte) error {
 	p.ChannelNum = r.ReadByte()
 	//sn := r.ReadCString(UmbrellaSnLen)
 	//p.UmbrellaSn = string(sn)
-	r.ReadInt(binary.LittleEndian, &p.UmbrellaSn)
+	//r.ReadInt(binary.LittleEndian, &p.UmbrellaSn)
+	for i:=0 ; i < 4; i ++{
+		p.UmbrellaSn = append(p.UmbrellaSn, r.ReadByte())
+	}
+	log.Printf(" CmdUmbrellaInReqPkt Unpack ChannelNum: %d, UmbrellaSn: %x  \n", p.ChannelNum , p.UmbrellaSn)
 	return r.Error()
 }
 

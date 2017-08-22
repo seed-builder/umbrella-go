@@ -415,12 +415,14 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) ([]Packer, error) {
 
 func (c *Conn) ParsePkt(len int, data []byte) [][]byte {
 	var result [][]byte
-	var head ,foot , complete int
-	for i := 0 ; i < len; i ++ {
+	var head ,foot , complete, i int
+	for i < len {
 		d := data[i]
 		if d == CMDHEAD {
 			head = i
+			i += 5
 			complete ++
+			continue
 		}
 		if d == CMDFOOT {
 			foot = i
@@ -432,6 +434,7 @@ func (c *Conn) ParsePkt(len int, data []byte) [][]byte {
 			foot=0
 			complete = 0
 		}
+		i ++
 	}
 	return result
 }
@@ -476,6 +479,7 @@ func (c *Conn) CheckAndUnpackPkt(leftData []byte) (Packer, error)  {
 			SeqId: seqId,
 		}
 	case CMD_UMBRELLA_IN:
+		log.Println(" receive a command : CMD_UMBRELLA_IN ")
 		p = &CmdUmbrellaInReqPkt{
 			SeqId: seqId,
 		}
@@ -499,6 +503,7 @@ func (c *Conn) CheckAndUnpackPkt(leftData []byte) (Packer, error)  {
 		//return nil, ErrCommandIdNotSupported
 	}
 	if canUnpack && (length-1) > 3 {
+		log.Println(" CheckAndUnpackPkt prepare to Unpack data ")
 		err := p.Unpack(leftData[3:length-1])
 		if err != nil {
 			log.Printf(" CheckAndUnpackPkt Unpack data err: %v \n", err)

@@ -5,6 +5,7 @@ import(
 	"github.com/mitchellh/mapstructure"
 	"time"
 	"umbrella/utilities"
+	"strings"
 )
 
 // 1-未发放 2-待借中 3-借出中 4-失效（超过还伞时间） 5-异常
@@ -54,7 +55,7 @@ func (m *Umbrella) Query() *gorm.DB{
 }
 
 func (m *Umbrella) Check(umbrellaSn string) uint8 {
-	m.Query().First(m, "sn = ?", umbrellaSn)
+	m.Query().First(m, "sn = ?", strings.ToUpper(umbrellaSn))
 	if m.ID == 0 {
 		return utilities.RspStatusUmbrellaIllegal
 	}
@@ -66,7 +67,8 @@ func (m *Umbrella) Check(umbrellaSn string) uint8 {
 
 //InEquipment 进入设备, 还伞
 func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8)  uint8 {
-	m.Query().First(m, "sn = ?", umbrellaSn)
+
+	m.Query().First(m, "sn = ?", strings.ToUpper(umbrellaSn))
 	if m.ID == 0 {
 		return utilities.RspStatusUmbrellaIllegal
 	}
@@ -97,6 +99,8 @@ func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelN
 		}else{
 			m.Status = UmbrellaStatusIn //UmbrellaStatusAbnormal
 		}
+	}else if m.Status == UmbrellaStatusInit {
+		m.Status = UmbrellaStatusIn
 	}
 	m.Save()
 
@@ -110,7 +114,7 @@ func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelN
 
 //OutEquipment 出设备
 func (m *Umbrella) OutEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8) uint8 {
-	m.Query().First(m, "sn = ?", umbrellaSn)
+	m.Query().First(m, "sn = ?", strings.ToUpper(umbrellaSn))
 	if m.ID == 0 {
 		return utilities.RspStatusUmbrellaIllegal
 	}

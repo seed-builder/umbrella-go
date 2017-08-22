@@ -6,6 +6,9 @@ import (
 	"sync"
 	"umbrella/network"
 	//"math/rand"
+	"math/rand"
+	//"encoding/hex"
+	"encoding/hex"
 )
 
 const (
@@ -13,26 +16,14 @@ const (
 )
 
 var umbrellaSns = []string{
-	"1234",
-	"123456",
-	"S037362",
-	"S540212",
-	"S107023",
-	"S580560",
-	"S066311",
-	"S180633",
-	"S661043",
-	"S975045",
-	"S937311",
-	"S005841",
-	"S592082",
-	"S079349",
-	"S427389",
-	"S371046",
-	"S897755",
-	"S328415",
-	"S415496",
-	"S232893",
+	"17617E62",
+	"B7A87962",
+	"87299762",
+	"67C37462",
+	"F7979162",
+	"A7FB8262",
+	"E7C27562",
+	"67B45112",
 }
 
 func startAClient(idx int, sn string) {
@@ -52,18 +43,19 @@ func startAClient(idx int, sn string) {
 	for {
 		select {
 		case <-t.C:
-
-			//p :=  &network.CmdUmbrellaInReqPkt{}
-			//p.ChannelNum = uint8(rand.Intn(10))
-			//var i = rand.Intn(19)
-			//p.UmbrellaSn = umbrellaSns[i]
-			//err = c.SendReqPkt(p)
-			//log.Printf("client %d: send a umbrella in request : %v.", idx, p)
-			//if err != nil {
-			//	log.Printf("client %d: send a umbrella in request error: %s.", idx, err)
-			//} else {
-			//	log.Printf("client %d: send a umbrella in request ok", idx)
-			//}
+			p :=  &network.CmdUmbrellaInReqPkt{}
+			p.ChannelNum = uint8(rand.Intn(5))
+			var i = rand.Intn(5)
+			sn := umbrellaSns[i]
+			log.Printf("client %d: prepare to send a umbrella in request  SN: %s,  ChannelNum: %d.", idx, sn, p.ChannelNum)
+			p.UmbrellaSn, _ = hex.DecodeString(sn)
+			err = c.SendReqPkt(p)
+			log.Printf("client %d: send a umbrella in request : %v.", idx, p)
+			if err != nil {
+				log.Printf("client %d: send a umbrella in request error: %s.", idx, err)
+			} else {
+				log.Printf("client %d: send a umbrella in request ok", idx)
+			}
 			break
 		default:
 		}
@@ -89,7 +81,6 @@ func startAClient(idx int, sn string) {
 				log.Printf("client %d: send network active response success.", idx)
 			}
 
-
 		case *network.CmdUmbrellaInRspPkt:
 			log.Printf("client %d: receive a network umbrella in response: %v.", idx, p)
 
@@ -97,7 +88,7 @@ func startAClient(idx int, sn string) {
 			log.Printf("client %d: receive a network open channel request: %v.", idx, p)
 			rsp := &network.CmdUmbrellaOutRspPkt{
 				Status: 1,
-				UmbrellaSn: 1234578,
+				UmbrellaSn: []byte{0x88, 0x04, 0xe3, 0x84},
 			}
 			time.Sleep(6*time.Second)
 			err := c.SendRspPkt(rsp, p.SeqId)
@@ -128,10 +119,10 @@ func main() {
 		"M200705kxra",
 		"E198408egtb",
 	}
-	for i := 1; i < 2; i++ {
+	//for i := 0; i < 1; i++ {
 		wg.Add(1)
-		go startAClient(i + 1, sn[i])
-	}
+		go startAClient(1, sn[0])
+	//}
 	wg.Wait()
 	log.Println("Client example ends!")
 }

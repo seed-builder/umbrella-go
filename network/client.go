@@ -63,7 +63,6 @@ func (cli *Client) Connect(servAddr, sn string, timeout time.Duration) error {
 	rsp, ok = p.(*CmdConnectRspPkt)
 	status = rsp.Status
 
-
 	if !ok {
 		err = ErrRespNotMatch
 		return err

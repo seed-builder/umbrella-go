@@ -6,6 +6,7 @@ import (
 	"log"
 	"umbrella/models"
 	"strconv"
+	"strings"
 )
 
 func LoadEquipmentRoutes(r gin.IRouter)  {
@@ -26,8 +27,9 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 				if conn, ok := EquipmentSrv.EquipmentConns[sn]; ok {
 					conn.Equipment.OutChannel(channelNum)
 					umbrella := &models.Umbrella{}
-					sn := strconv.Itoa(int(umbrellaSn))
-					umbrella.OutEquipment(conn.Equipment, sn, channelNum)
+					//sn := strconv.Itoa(int(umbrellaSn))
+					umbrellaSn = strings.ToUpper(umbrellaSn)
+					umbrella.OutEquipment(conn.Equipment, umbrellaSn, channelNum)
 				}
 				c.JSON(http.StatusOK, gin.H{"success": true, "equipment_sn": sn, "channel_num": channelNum, "umbrella_sn": umbrellaSn,  "err": "" })
 				return
@@ -50,8 +52,8 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 					conn.Equipment.OutChannel(channelNum)
 					umbrella := &models.Umbrella{}
 					//umbrella.OutEquipment(conn.Equipment, umbrellaSn, channelNum)
-					usn := strconv.Itoa(int(umbrellaSn))
-					umbrella.OutEquipment(conn.Equipment, usn, channelNum)
+					//usn := umbrellaSn
+					umbrella.OutEquipment(conn.Equipment, umbrellaSn, channelNum)
 					hire := &models.CustomerHire{}
 					cid, _ := strconv.ParseUint(customerId, 10, 32)
 					hire.Create(conn.Equipment, umbrella, uint(cid))

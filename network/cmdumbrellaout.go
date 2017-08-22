@@ -1,7 +1,5 @@
 package network
 
-import "encoding/binary"
-
 const (
 	CmdUmbrellaOutReqPktLen uint32 = 4 + 1
 	CmdUmbrellaOutRspPktLen uint32 = 4 + 1 + 4
@@ -20,7 +18,7 @@ type CmdUmbrellaOutRspPkt struct{
 	SeqId uint8
 	Status uint8
 	//len 4
-	UmbrellaSn int32
+	UmbrellaSn []byte
 }
 
 // Pack packs the CmdActiveTestReqPkt to bytes stream for client side.
@@ -70,8 +68,10 @@ func (p *CmdUmbrellaOutRspPkt) Pack(seqId uint8) ([]byte, error) {
 	w.WriteByte(byte(CMD_UMBRELLA_OUT_RESP))
 
 	w.WriteByte(p.Status)
-	w.WriteInt(binary.LittleEndian, p.UmbrellaSn)
-
+	//w.WriteInt(binary.LittleEndian, p.UmbrellaSn)
+	for _, b := range p.UmbrellaSn {
+		w.WriteByte(b)
+	}
 	return w.Bytes()
 }
 
@@ -86,7 +86,9 @@ func (p *CmdUmbrellaOutRspPkt) Unpack(data []byte) error {
 	p.Status = r.ReadByte()
 	//sn := r.ReadCString(UmbrellaSnLen)
 	//p.UmbrellaSn = string(sn)
-	r.ReadInt(binary.LittleEndian, &p.UmbrellaSn)
-
+	//r.ReadInt(binary.LittleEndian, &p.UmbrellaSn)
+	for i:=0 ; i < 4; i ++{
+		p.UmbrellaSn = append(p.UmbrellaSn, r.ReadByte())
+	}
 	return r.Error()
 }
