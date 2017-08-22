@@ -20,14 +20,12 @@ const(
 type Umbrella struct {
 	gorm.Model
 	Base
+	Number string
 	Sn string
 	EquipmentId uint
 	EquipmentChannelNum uint8
 	SiteId uint
 	Status int32
-	Name string
-	Color string
-	Logo string
 	PriceId uint
 }
 
