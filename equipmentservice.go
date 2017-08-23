@@ -61,10 +61,12 @@ func (es *EquipmentService) RegisterConn(equipmentSn string, conn *network.Conn)
 	es.EquipmentConns[equipmentSn] = conn
 }
 
-func (es *EquipmentService) OpenChannel(equipmentSn string) (channelNum uint8, seqId uint8, err error) {
+func (es *EquipmentService) OpenChannel(equipmentSn string, channelNum uint8) (uint8, uint8, error) {
 	conn, ok := es.EquipmentConns[equipmentSn]
 	if ok {
-		channelNum := conn.Equipment.ChooseChannel()
+		if channelNum == 0 {
+			channelNum = conn.Equipment.ChooseChannel()
+		}
 		req := &network.CmdUmbrellaOutReqPkt{}
 		req.ChannelNum = channelNum
 		seqId := <- conn.SeqId

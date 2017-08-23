@@ -112,7 +112,7 @@ func main() {
 				umbrella.EquipmentSrv.Close()
 				os.Exit(0)
 			case "open":
-				umbrella.EquipmentSrv.OpenChannel(arr[1])
+				umbrella.EquipmentSrv.OpenChannel(arr[1], 0)
 			default:
 
 			}
