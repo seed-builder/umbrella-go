@@ -6,9 +6,7 @@ import (
 	"sync"
 	"umbrella/network"
 	//"math/rand"
-	"math/rand"
 	//"encoding/hex"
-	"encoding/hex"
 )
 
 const (
@@ -43,19 +41,19 @@ func startAClient(idx int, sn string) {
 	for {
 		select {
 		case <-t.C:
-			p :=  &network.CmdUmbrellaInReqPkt{}
-			p.ChannelNum = uint8(rand.Intn(5))
-			var i = rand.Intn(5)
-			sn := umbrellaSns[i]
-			log.Printf("client %d: prepare to send a umbrella in request  SN: %s,  ChannelNum: %d.", idx, sn, p.ChannelNum)
-			p.UmbrellaSn, _ = hex.DecodeString(sn)
-			err = c.SendReqPkt(p)
-			log.Printf("client %d: send a umbrella in request : %v.", idx, p)
-			if err != nil {
-				log.Printf("client %d: send a umbrella in request error: %s.", idx, err)
-			} else {
-				log.Printf("client %d: send a umbrella in request ok", idx)
-			}
+			//p :=  &network.CmdUmbrellaInReqPkt{}
+			//p.ChannelNum = uint8(rand.Intn(5))
+			//var i = rand.Intn(5)
+			//sn := umbrellaSns[i]
+			//log.Printf("client %d: prepare to send a umbrella in request  SN: %s,  ChannelNum: %d.", idx, sn, p.ChannelNum)
+			//p.UmbrellaSn, _ = hex.DecodeString(sn)
+			//err = c.SendReqPkt(p)
+			//log.Printf("client %d: send a umbrella in request : %v.", idx, p)
+			//if err != nil {
+			//	log.Printf("client %d: send a umbrella in request error: %s.", idx, err)
+			//} else {
+			//	log.Printf("client %d: send a umbrella in request ok", idx)
+			//}
 			break
 		default:
 		}

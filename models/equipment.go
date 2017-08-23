@@ -55,11 +55,15 @@ func (m *Equipment) Query() *gorm.DB{
 func (m *Equipment) InitChannel() {
 	m.ChannelCache = make(map[uint8]uint8, m.Channels)
 	umbrella := Umbrella{}
+	var have int32
 	for i := uint8(1); i <= m.Channels; i ++ {
 		var count uint8
 		umbrella.Query().Where("equipment_id = ? and equipment_channel_num = ?", m.ID, i).Count(&count)
 		m.ChannelCache[i] = count
+		have =  have + int32(count)
 	}
+	m.Have = have
+	utilities.MyDB.Model(m).Update("have", have)
 }
 
 //ChooseChannel 选择伞保有量最多的通道
@@ -79,11 +83,15 @@ func (m *Equipment) InChannel(channelNum uint8){
 	n := m.ChannelCache[channelNum]
 	m.ChannelCache[channelNum] = n + 1
 	m.UsedChannelNum = channelNum
+	m.Have = m.Have + 1
+	utilities.MyDB.Model(m).Update("have", m.Have )
 }
 
 func (m *Equipment) OutChannel(channelNum uint8){
 	n := m.ChannelCache[channelNum]
 	m.ChannelCache[channelNum] = n - 1
+	m.Have = m.Have - 1
+	utilities.MyDB.Model(m).Update("have", m.Have )
 }
 
 

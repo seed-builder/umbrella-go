@@ -93,4 +93,16 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 		}
 		c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
 	})
+
+	r.GET("/monitor", func(c *gin.Context) {
+		data := gin.H{}
+		for sn, conn := range EquipmentSrv.EquipmentConns{
+			data[sn] = gin.H{
+				"Status": conn.Equipment.Status,
+				"Channels": conn.Equipment.ChannelCache,
+				"UsedChannelNum": conn.Equipment.UsedChannelNum,
+			}
+		}
+		c.JSON(http.StatusOK, data)
+	})
 }
