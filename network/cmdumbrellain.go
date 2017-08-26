@@ -1,6 +1,6 @@
 package network
 
-import "log"
+import "umbrella/utilities"
 
 const (
 	CmdUmbrellaInReqPktLen uint32 = 5+4
@@ -63,7 +63,7 @@ func (p *CmdUmbrellaInReqPkt) Unpack(data []byte) error {
 	for i:=0 ; i < 4; i ++{
 		p.UmbrellaSn = append(p.UmbrellaSn, r.ReadByte())
 	}
-	log.Printf(" CmdUmbrellaInReqPkt Unpack ChannelNum: %d, UmbrellaSn: %x  \n", p.ChannelNum , p.UmbrellaSn)
+	utilities.SysLog.Infof(" CmdUmbrellaInReqPkt Unpack ChannelNum: %d, UmbrellaSn: %x  \n", p.ChannelNum , p.UmbrellaSn)
 	return r.Error()
 }
 

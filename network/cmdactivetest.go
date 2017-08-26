@@ -1,7 +1,5 @@
 package network
 
-import "log"
-
 // Packet length const for cmd active test request and response packets.
 const (
 	CmdActiveTestReqPktLen uint32 = 4     //12d, 0xc
@@ -33,7 +31,6 @@ func (p *CmdActiveTestReqPkt) Pack(seqId uint8) ([]byte, error) {
 	w.WriteByte(byte(CMD_ACTIVE_TEST))
 
 	p.SeqId = seqId
-	log.Println("cmd active test pack seqid: ", seqId)
 	return w.Bytes()
 }
 

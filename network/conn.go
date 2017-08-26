@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 	"umbrella/models"
-	"log"
 	"fmt"
 	"sync/atomic"
 	"umbrella/utilities"
@@ -23,8 +22,8 @@ const (
 
 // Errors for conn operations
 var (
-	ErrConnIsClosed = errors.New("connection is closed")
-	ErrCmdIllegal = errors.New("illegal cmd")
+	ErrConnIsClosed = errors.New("连接已关闭")
+	ErrCmdIllegal = errors.New("非法命令")
 )
 
 var noDeadline = time.Time{}
@@ -37,8 +36,17 @@ const (
 	CONN_AUTHOK
 )
 
-type Conn struct {
+const (
+	CMD_REQUEST_MIN, CMD_RESPONSE_MIN CommandId = iota, 0x80 + iota
+	CMD_ACTIVE_TEST, CMD_ACTIVE_TEST_RESP
+	CMD_CONNECT, CMD_CONNECT_RESP
+	CMD_UMBRELLA_OUT, CMD_UMBRELLA_OUT_RESP
+	CMD_UMBRELLA_IN, CMD_UMBRELLA_IN_RESP
+	CMD_ILLEGAL, CMD_IILEGAL_RESP
+	CMD_REQUEST_MAX, CMD_RESPONSE_MAX
+)
 
+type Conn struct {
 	server *TcpServer // the Server on which the connection arrived
 
 	// for active test
@@ -102,35 +110,36 @@ func NewConn(svr *TcpServer, conn net.Conn, typ Type) *Conn {
 func (c *Conn) Serve() {
 	defer func() {
 		if err := recover(); err != nil {
-			c.server.ErrorLog.Printf("panic serving %v: %v\n", c.rw.RemoteAddr(), err)
+			utilities.SysLog.Panicf("客户端会话严重错误 %v: %v", c.rw.RemoteAddr(), err)
 		}
 	}()
-
 	defer c.Close()
-	c.server.ErrorLog.Printf("conn serving %v \n", c.rw.RemoteAddr())
 
-	c.server.ErrorLog.Printf("waiting for receiving data: %v  \n", c.rw.RemoteAddr())
+	utilities.SysLog.Infof("开启客户端【%v】会话, 等待接收命令 ", c.rw.RemoteAddr())
 	for {
 		select {
 		case <-c.exceed:
+			utilities.SysLog.Warningf("关闭客户端【%v】会话 ", c.rw.RemoteAddr())
 			return // close the connection.
 		default:
 		}
-
+		//读取命令
 		rs, err := c.readPacket()
 		if err != nil {
-			c.server.ErrorLog.Printf("receiving data: %v \n", err)
 			if e, ok := err.(net.Error); ok && e.Timeout() {
+				utilities.SysLog.Warningf("读取命令超时：%v ", err)
 				continue
 			}
 			if err == ErrCmdIllegal {
+				utilities.SysLog.Warning("非法命令")
 				continue
 			}
+			utilities.SysLog.Errorf("读取命令错误：%v ", err)
 			break
 			//continue
 		}
 
-		c.server.ErrorLog.Printf("readPacket response has : %d \n", len(rs))
+		utilities.SysLog.Infof("客户端【%v】,有【%d】条命令待处理", c.rw.RemoteAddr(), len(rs))
 		for _, r := range rs {
 			_, err = c.server.Handler.ServeHandle(r, r.Packet, c.server.ErrorLog)
 			if err1 := c.finishPacket(r); err1 != nil {
@@ -177,8 +186,6 @@ func (c *Conn) parseResponse(i Packer) (*Response, error)  {
 			},
 			SeqId: p.SeqId,
 		}
-		c.server.ErrorLog.Printf("receive a cmd connect request from %v[%d]\n",
-			c.rw.RemoteAddr(), p.SeqId)
 
 	case *CmdUmbrellaOutReqPkt:
 		pkt = &Packet{
@@ -193,8 +200,6 @@ func (c *Conn) parseResponse(i Packer) (*Response, error)  {
 			},
 			SeqId: p.SeqId,
 		}
-		c.server.ErrorLog.Printf("receive a cmd open channel request from %v[%d]\n",
-			c.rw.RemoteAddr(), p.SeqId)
 
 	case *CmdUmbrellaOutRspPkt:
 		pkt = &Packet{
@@ -204,8 +209,6 @@ func (c *Conn) parseResponse(i Packer) (*Response, error)  {
 		rsp = &Response{
 			Packet: pkt,
 		}
-		c.server.ErrorLog.Printf("receive a cmd open channel response from %v[%d]\n",
-			c.rw.RemoteAddr(), p.SeqId)
 
 	case *CmdUmbrellaInReqPkt:
 		pkt = &Packet{
@@ -220,8 +223,6 @@ func (c *Conn) parseResponse(i Packer) (*Response, error)  {
 			},
 			SeqId: p.SeqId,
 		}
-		c.server.ErrorLog.Printf("receive a cmd umbrella in request from %v[%d]\n",
-			c.rw.RemoteAddr(), p.SeqId)
 
 	case *CmdActiveTestReqPkt:
 		pkt = &Packet{
@@ -234,33 +235,23 @@ func (c *Conn) parseResponse(i Packer) (*Response, error)  {
 			Packer: &CmdActiveTestRspPkt{},
 			SeqId: p.SeqId,
 		}
-		c.server.ErrorLog.Printf("receive a cmd active request from %v[%d]\n",
-			c.rw.RemoteAddr(), p.SeqId)
-
 	case *CmdActiveTestRspPkt:
 		pkt = &Packet{
 			Packer: p,
 			Conn:   c,
 		}
-
 		rsp = &Response{
 			Packet: pkt,
 		}
-		c.server.ErrorLog.Printf("receive a cmd active response from %v[%d]\n",
-			c.rw.RemoteAddr(), p.SeqId)
-
 	case *CmdIllegalRspPkt:
 		pkt = &Packet{
 			Packer: p,
 			Conn:   c,
 		}
-
 		rsp = &Response{
 			Packet: pkt,
 			Packer: p,
 		}
-		c.server.ErrorLog.Printf("receive a illegal cmd request from %v[%d]\n",
-			c.rw.RemoteAddr(), p.SeqId)
 
 	default:
 		return nil, NewOpError(ErrUnsupportedPkt,
@@ -284,13 +275,14 @@ func (c *Conn) finishPacket(r *Response) error {
 		// start a goroutine for sending active test.
 		c.startActiveTest()
 	}
+	utilities.SysLog.Infof("预备向客户端【%v】发送响应命令", c.rw.RemoteAddr())
 	return c.SendPkt(r.Packer, r.SeqId)
 }
 
 func (c *Conn) startActiveTest(){
 	exceed := make(chan struct{})
 	c.exceed = exceed
-	c.server.ErrorLog.Printf("start active test serving %v \n", c.rw.RemoteAddr())
+	utilities.SysLog.Infof("预备向客户端【%v】发送维持包数据 ", c.rw.RemoteAddr())
 	go func() {
 		t := time.NewTicker(c.t)
 		defer t.Stop()
@@ -302,7 +294,7 @@ func (c *Conn) startActiveTest(){
 			case <- t.C:
 				// check whether c.counter exceeds
 				if atomic.LoadInt32(&c.counter) >= c.n {
-					c.server.ErrorLog.Printf("no client active test response returned from %v for %d times!",
+					utilities.SysLog.Infof("没接收到客户端【%v】的维持包反馈【%d】次!",
 						c.rw.RemoteAddr(), c.n)
 					exceed <- struct{}{}
 					break
@@ -310,9 +302,9 @@ func (c *Conn) startActiveTest(){
 				// send a active test packet to peer, increase the active test counter
 				p := &CmdActiveTestReqPkt{}
 				err := c.SendPkt(p, <- c.SeqId)
-				c.server.ErrorLog.Printf("sending active test to %v \n", c.rw.RemoteAddr())
+				utilities.SysLog.Infof("向客户端【%v】发送维持包数据 ", c.rw.RemoteAddr())
 				if err != nil {
-					c.server.ErrorLog.Printf("send cmd active test request to %v error: %v", c.rw.RemoteAddr(), err)
+					utilities.SysLog.Infof("向客户端【%v】发送维持包数据错误【$s】", c.rw.RemoteAddr(), err)
 				} else {
 					atomic.AddInt32(&c.counter, 1)
 				}
@@ -326,7 +318,7 @@ func (c *Conn) Close() {
 		if c.State == CONN_CLOSED {
 			return
 		}
-		c.server.ErrorLog.Printf("close connection with %v!\n", c.rw.RemoteAddr())
+		utilities.SysLog.Warningf("关闭客户端【%v】连接!", c.rw.RemoteAddr())
 		if c.Equipment != nil {
 			c.Equipment.Offline()
 		}
@@ -365,10 +357,8 @@ func (c *Conn) SendPkt(packet Packer, seqId uint8) error {
 	buf = append(buf, sum)
 	buf = append(buf, 0x55)
 
-	log.Printf("conn send data, len = %d, data = %x \n", len(buf), buf )
-
 	_, err = c.rw.Write(buf) //block write
-
+	utilities.SysLog.Infof("发送命令【%x】序列号【%d】", buf[:], seqId)
 	buf = nil
 	if err != nil {
 		return err
@@ -393,20 +383,20 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) ([]Packer, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf(" RecvAndUnpackPkt receive client data len = %d, data=%x . \n", length, leftData[:length])
+	utilities.SysLog.Infof("读取到的数据【%x】长度【%d】", leftData[:length], length)
 
 	cmds := c.ParsePkt(length, leftData)
 	num := len(cmds)
-	log.Printf("ParsePkt cmd len = %d \n.", num)
+	utilities.SysLog.Infof("解析出【%d】条命令 .", num)
 	var packers []Packer
-	if num > 0 {
+	if  num > 0 {
 		for _, cmd := range cmds {
-			log.Printf("ParsePkt cmd data = %x .\n", cmd)
+			utilities.SysLog.Infof("解析命令详情数据【%x】.", cmd)
 			p, err := c.CheckAndUnpackPkt(cmd)
 			if err == nil {
 				packers = append(packers, p)
 			}else{
-				log.Printf("CheckAndUnpackPkt err = %v .\n", err)
+				utilities.SysLog.Infof("解析命令详情数据【%x】错误： %v .", cmd, err)
 			}
 		}
 	}
@@ -460,7 +450,7 @@ func (c *Conn) CheckAndUnpackPkt(leftData []byte) (Packer, error)  {
 	// Command_Id
 	commandId := CommandId(leftData[2])
 
-	log.Printf(" CheckAndUnpackPkt receive data total len: %d,  command id : %x \n", length, commandId)
+	utilities.SysLog.Infof("命令【%x】总长度【%d】,编号【%x】【%s】, 序列号【%d】 ", leftData, length, commandId, CmdDesc(commandId), seqId)
 	// The left packet data (start from seqId in header).
 
 	var p Packer
@@ -508,10 +498,33 @@ func (c *Conn) CheckAndUnpackPkt(leftData []byte) (Packer, error)  {
 	if canUnpack && (length-1) > 3 {
 		err := p.Unpack(leftData[3:length-1])
 		if err != nil {
-			log.Printf(" CheckAndUnpackPkt Unpack data err: %v \n", err)
+			utilities.SysLog.Warningf(" 解析命令详情数据错误： %v ", err)
 			return nil, err
 		}
 	}
 	return p, nil
+}
+
+func CmdDesc(cmdId CommandId) string {
+	var desc string
+	switch cmdId {
+	case CMD_CONNECT:
+		desc = "登陆请求"
+	case CMD_CONNECT_RESP:
+		desc = "登陆响应"
+	case CMD_UMBRELLA_OUT:
+		desc = "出伞请求"
+	case CMD_UMBRELLA_OUT_RESP:
+		desc = "出伞响应"
+	case CMD_UMBRELLA_IN:
+		desc = "进伞请求"
+	case CMD_UMBRELLA_IN_RESP:
+		desc = "进伞响应"
+	case CMD_ACTIVE_TEST:
+		desc = "维持包请求"
+	case CMD_ACTIVE_TEST_RESP:
+		desc = "维持包响应"
+	}
+	return desc
 }
 

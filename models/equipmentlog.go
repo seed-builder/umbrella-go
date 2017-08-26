@@ -37,5 +37,5 @@ func (m *EquipmentLog) BeforeDelete() (err error) {
 }
 
 func (m *EquipmentLog) Query() *gorm.DB{
-	return utilities.MyDB.Model(&EquipmentLog{})
+	return utilities.MyDB.Model(m)
 }

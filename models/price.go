@@ -25,5 +25,5 @@ func (Price) TableName() string {
 }
 
 func (m *Price) Query() *gorm.DB{
-	return utilities.MyDB.Model(&Price{})
+	return utilities.MyDB.Model(m)
 }

@@ -49,7 +49,7 @@ func (m *Equipment) BeforeDelete() (err error) {
 }
 
 func (m *Equipment) Query() *gorm.DB{
-	return utilities.MyDB.Model(&Equipment{})
+	return utilities.MyDB.Model(m)
 }
 
 func (m *Equipment) InitChannel() {
@@ -58,7 +58,7 @@ func (m *Equipment) InitChannel() {
 	var have int32
 	for i := uint8(1); i <= m.Channels; i ++ {
 		var count uint8
-		umbrella.Query().Where("equipment_id = ? and equipment_channel_num = ?", m.ID, i).Count(&count)
+		umbrella.Query().Where("status=2 and equipment_id = ? and equipment_channel_num = ?", m.ID, i).Count(&count)
 		m.ChannelCache[i] = count
 		have =  have + int32(count)
 	}
@@ -76,6 +76,9 @@ func (m *Equipment) ChooseChannel() uint8 {
 			len = l
 		}
 	}
+	if len == 0 && m.UsedChannelNum > 0 {
+		channelNum = m.UsedChannelNum
+	}
 	return channelNum
 }
 
@@ -89,11 +92,12 @@ func (m *Equipment) InChannel(channelNum uint8){
 
 func (m *Equipment) OutChannel(channelNum uint8){
 	n := m.ChannelCache[channelNum]
-	m.ChannelCache[channelNum] = n - 1
-	m.Have = m.Have - 1
-	utilities.MyDB.Model(m).Update("have", m.Have )
+	if n > 0 {
+		m.ChannelCache[channelNum] = n - 1
+		m.Have = m.Have - 1
+		utilities.MyDB.Model(m).Update("have", m.Have)
+	}
 }
-
 
 func (m *Equipment) Online(){
 	m.Status = EquipmentStatusOnline

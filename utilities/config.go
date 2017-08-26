@@ -12,6 +12,7 @@ type Config struct {
 	TcpPort string `yaml:"tcp_port"`
 	TcpTestTimeout int32 `yaml:"tcp_test_timeout"`
 	TcpTestMax int32 `yaml:"tcp_test_max"`
+	TcpResendInterval int32 `yaml:"tcp_resend_interval"`
 	Debug bool `yaml:"debug"`
 	DbDialect string `yaml:"db_dialect"`
 	DbServer string `yaml:"db_server"`

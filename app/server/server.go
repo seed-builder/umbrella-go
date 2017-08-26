@@ -1,55 +1,19 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"github.com/gin-gonic/gin"
 	"time"
 	"umbrella"
 	"umbrella/utilities"
 	"umbrella/network"
-	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
-	"sync"
 	"bufio"
 	"strings"
 )
 
-var wg sync.WaitGroup
-
-func main1(){
-	fmt.Println("please enter ctl+c to terminate")
-	shutdown := make(chan struct{})
-
-	//go restApi()
-	go equipmentSrv()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		select {
-		case c := <-shutdown:
-			fmt.Println("shutdown system...", c)
-			umbrella.EquipmentSrv.Close()
-			return
-		}
-	}()
-	c := make(chan os.Signal)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGQUIT)
-
-	s := <-c
-	close(shutdown)
-	fmt.Println("Got signal:", s)
-	wg.Wait()
-	fmt.Println("System Quit")
-}
-
 func restApi()  {
-	//defer wg.Done()
-
-	log.Println("rest api service begin...")
+	utilities.SysLog.Info("REST api 服务启动, 端口：", utilities.SysConfig.HttpPort)
 	r := gin.Default()
 	r.Use(cors())
 	// This handler will match /user/john but will not match neither /user/ or /user
@@ -57,7 +21,6 @@ func restApi()  {
 		c.String(http.StatusOK, "Hello world!" )
 	})
 	umbrella.LoadEquipmentRoutes(r)
-	//r.Run(":" + utilities.SysConfig.HttpPort)
 
 	s := &http.Server{
 		Addr:           ":" + utilities.SysConfig.HttpPort,
@@ -82,7 +45,7 @@ func equipmentSrv(){
 
 	addr := utilities.SysConfig.TcpIp + ":" + utilities.SysConfig.TcpPort
 	duration := time.Duration(utilities.SysConfig.TcpTestTimeout)* time.Second
-	log.Println("equipmentSrv start serve at addr: ", addr)
+	utilities.SysLog.Info("设备监听服务启动, 地址： ", addr)
 	err := umbrella.EquipmentSrv.ListenAndServe(
 			addr,
 			network.V10,
@@ -91,35 +54,34 @@ func equipmentSrv(){
 			nil,
 		)
 	if err != nil {
-		log.Println("equipment ListenAndServ error:", err)
+		utilities.SysLog.Info("设备监听服务启动失败：", err)
 	}
 }
 
 func main() {
-	fmt.Println("server start...! ")
-
+	utilities.SysLog.Info("服务开始启动....")
 	go restApi()
 	go equipmentSrv()
 
-	fmt.Println("please input a command ...")
+	utilities.SysLog.Info("请输入命令...")
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if arr := strings.Fields(line); len(arr) > 0 {
 			switch arr[0] {
 			case "exit":
-				fmt.Println("server exit...")
+				utilities.SysLog.Info("系统退出")
 				umbrella.EquipmentSrv.Close()
 				os.Exit(0)
 			case "open":
 				umbrella.EquipmentSrv.OpenChannel(arr[1], 0)
 			default:
-
+				utilities.SysLog.Info("请输入正确的命令")
 			}
 		}
-		fmt.Println("please input a command ...")
+		utilities.SysLog.Info("请输入命令...")
 	}
 	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "reading standard input:", err)
+		utilities.SysLog.Error("命令错误:", err)
 	}
 }

@@ -3,7 +3,6 @@ package models
 import(
 	"github.com/jinzhu/gorm"
 	"github.com/mitchellh/mapstructure"
-	"time"
 	"umbrella/utilities"
 	"strings"
 )
@@ -49,7 +48,7 @@ func (m *Umbrella) BeforeDelete() (err error) {
 }
 
 func (m *Umbrella) Query() *gorm.DB{
-	return utilities.MyDB.Model(&Umbrella{})
+	return utilities.MyDB.Model(m)
 }
 
 func (m *Umbrella) Check(umbrellaSn string) uint8 {
@@ -65,12 +64,13 @@ func (m *Umbrella) Check(umbrellaSn string) uint8 {
 
 //InEquipment 进入设备, 还伞
 func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8)  uint8 {
-
 	m.Query().First(m, "sn = ?", strings.ToUpper(umbrellaSn))
 	if m.ID == 0 {
+		utilities.SysLog.Warningf("非法伞编号【%s】,禁止进入通道", umbrellaSn)
 		return utilities.RspStatusUmbrellaIllegal
 	}
 	if m.Status == UmbrellaStatusExpired {
+		utilities.SysLog.Warningf("伞过期编号【%s】,禁止进入通道", umbrellaSn)
 		return utilities.RspStatusUmbrellaExpired
 	}
 	m.Entity = m
@@ -79,31 +79,15 @@ func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelN
 	//m.Status = UmbrellaStatusIn
 
 	if m.Status == UmbrellaStatusOut {
-		hire := CustomerHire{}
-		hire.Entity = &hire
-		hire.Query().First(&hire, "umbrella_id = ? and status=1", m.ID)
-		now := time.Now()
-		if hire.ID > 0 {
-			if hire.ExpiredAt.Before(now) {
-				hire.Status = UmbrellaHireStatusExpired
-				m.Status = UmbrellaStatusExpired
-			} else {
-				hire.Status = UmbrellaHireStatusPaying
-				hire.ReturnAt = time.Now()
-				hire.ReturnEquipmentId = equipment.ID
-				hire.ReturnSiteId = equipment.SiteId
-			}
-			hire.Save()
-		}else{
-			m.Status = UmbrellaStatusIn //UmbrellaStatusAbnormal
-		}
-	}else if m.Status == UmbrellaStatusInit {
+		hire := &CustomerHire{}
+		m.Status = hire.UmbrellaReturn(m.ID, equipment.ID, equipment.SiteId)
+	}else {
 		m.Status = UmbrellaStatusIn
 	}
-	m.Save()
+	go m.Save()
 
 	if m.Status == UmbrellaStatusIn {
-		equipment.InChannel(channelNum)
+		go equipment.InChannel(channelNum)
 		return utilities.RspStatusSuccess
 	}else{
 		return utilities.RspStatusUmbrellaExpired
@@ -114,6 +98,7 @@ func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelN
 func (m *Umbrella) OutEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8) uint8 {
 	m.Query().First(m, "sn = ?", strings.ToUpper(umbrellaSn))
 	if m.ID == 0 {
+		utilities.SysLog.Warningf("非法伞编号【%s】,禁止出通道", umbrellaSn)
 		return utilities.RspStatusUmbrellaIllegal
 	}
 	m.Entity = m
@@ -121,6 +106,6 @@ func (m *Umbrella) OutEquipment(equipment *Equipment, umbrellaSn string, channel
 	m.EquipmentId = equipment.ID
 	m.EquipmentChannelNum = channelNum
 	m.SiteId = equipment.SiteId
-	m.Save()
+	go m.Save()
 	return utilities.RspStatusSuccess
 }

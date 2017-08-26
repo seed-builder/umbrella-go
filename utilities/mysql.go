@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/jinzhu/gorm"
 	_ "github.com/go-sql-driver/mysql"
-	"log"
 )
 
 var MyDB *gorm.DB
@@ -27,6 +26,6 @@ func init() {
 		MyDB.DB().Ping()
 		MyDB.LogMode(true)
 	} else {
-		log.Panic("Gorm Open Error: ", err)
+		SysLog.Panic("Gorm Open Error: ", err)
 	}
 }

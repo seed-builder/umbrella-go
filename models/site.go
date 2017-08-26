@@ -39,5 +39,5 @@ func (m *Site) BeforeDelete() (err error) {
 }
 
 func (m *Site) Query() *gorm.DB{
-	return utilities.MyDB.Model(&Site{})
+	return utilities.MyDB.Model(m)
 }

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"errors"
+	"umbrella/utilities"
 )
 
 // errors for cmpp server
@@ -60,7 +61,7 @@ func (srv *TcpServer) Serve(l net.Listener) error {
 				if max := 1 * time.Second; tempDelay > max {
 					tempDelay = max
 				}
-				srv.ErrorLog.Printf("accept error: %v; retrying in %v", e, tempDelay)
+				utilities.SysLog.Errorf("客户端接入错误：%v; retrying in %v", e, tempDelay)
 				time.Sleep(tempDelay)
 				continue
 			}
@@ -72,7 +73,7 @@ func (srv *TcpServer) Serve(l net.Listener) error {
 			continue
 		}
 
-		srv.ErrorLog.Printf("accept a connection from %v\n", c.rw.RemoteAddr())
+		utilities.SysLog.Infof("收到客户端接入： %v", c.rw.RemoteAddr())
 		go c.Serve()
 	}
 }

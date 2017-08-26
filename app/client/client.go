@@ -2,9 +2,9 @@ package main
 
 import (
 	"time"
-	"log"
 	"sync"
 	"umbrella/network"
+	"umbrella/utilities"
 	//"math/rand"
 	//"encoding/hex"
 )
@@ -31,10 +31,10 @@ func startAClient(idx int, sn string) {
 	//119.23.214.176
 	err := c.Connect(":7777", sn, connectTimeout)
 	if err != nil {
-		log.Printf("client %d: connect error: %s.", idx, err)
+		utilities.SysLog.Errorf("client %d: connect error: %s.", idx, err)
 		return
 	}
-	log.Printf("client %d: connect and auth ok", idx)
+	utilities.SysLog.Infof("client %d: connect and auth ok", idx)
 
 	t := time.NewTicker(time.Second * 5)
 	defer t.Stop()
@@ -45,14 +45,14 @@ func startAClient(idx int, sn string) {
 			//p.ChannelNum = uint8(rand.Intn(5))
 			//var i = rand.Intn(5)
 			//sn := umbrellaSns[i]
-			//log.Printf("client %d: prepare to send a umbrella in request  SN: %s,  ChannelNum: %d.", idx, sn, p.ChannelNum)
+			//utilities.SysLog.Infof("client %d: prepare to send a umbrella in request  SN: %s,  ChannelNum: %d.", idx, sn, p.ChannelNum)
 			//p.UmbrellaSn, _ = hex.DecodeString(sn)
 			//err = c.SendReqPkt(p)
-			//log.Printf("client %d: send a umbrella in request : %v.", idx, p)
+			//utilities.SysLog.Infof("client %d: send a umbrella in request : %v.", idx, p)
 			//if err != nil {
-			//	log.Printf("client %d: send a umbrella in request error: %s.", idx, err)
+			//	utilities.SysLog.Infof("client %d: send a umbrella in request error: %s.", idx, err)
 			//} else {
-			//	log.Printf("client %d: send a umbrella in request ok", idx)
+			//	utilities.SysLog.Infof("client %d: send a umbrella in request ok", idx)
 			//}
 			break
 		default:
@@ -61,7 +61,7 @@ func startAClient(idx int, sn string) {
 		// recv packets
 		ps, err := c.RecvAndUnpackPkt(time.Second * 10)
 		if err != nil {
-			//log.Printf("client %d: client read and unpack pkt error: %s.", idx, err)
+			//utilities.SysLog.Infof("client %d: client read and unpack pkt error: %s.", idx, err)
 			//break
 			continue
 		}
@@ -69,21 +69,21 @@ func startAClient(idx int, sn string) {
 		switch p := i.(type) {
 
 		case *network.CmdActiveTestReqPkt:
-			log.Printf("client %d: receive a network active request: %v.", idx, p)
+			utilities.SysLog.Infof("client %d: receive a network active request: %v.", idx, p)
 			rsp := &network.CmdActiveTestRspPkt{}
 			err := c.SendRspPkt(rsp, p.SeqId)
 			if err != nil {
-				log.Printf("client %d: send network active response error: %s.", idx, err)
+				utilities.SysLog.Infof("client %d: send network active response error: %s.", idx, err)
 				break
 			}else{
-				log.Printf("client %d: send network active response success.", idx)
+				utilities.SysLog.Infof("client %d: send network active response success.", idx)
 			}
 
 		case *network.CmdUmbrellaInRspPkt:
-			log.Printf("client %d: receive a network umbrella in response: %v.", idx, p)
+			utilities.SysLog.Infof("client %d: receive a network umbrella in response: %v.", idx, p)
 
 		case *network.CmdUmbrellaOutReqPkt:
-			log.Printf("client %d: receive a network open channel request: %v.", idx, p)
+			utilities.SysLog.Infof("client %d: receive a network open channel request: %v.", idx, p)
 			rsp := &network.CmdUmbrellaOutRspPkt{
 				Status: 1,
 				UmbrellaSn: []byte{0x88, 0x04, 0xe3, 0x84},
@@ -91,10 +91,10 @@ func startAClient(idx int, sn string) {
 			time.Sleep(6*time.Second)
 			err := c.SendRspPkt(rsp, p.SeqId)
 			if err != nil {
-				log.Printf("client %d: send network open channel  response error: %s.", idx, err)
+				utilities.SysLog.Infof("client %d: send network open channel  response error: %s.", idx, err)
 				break
 			}else{
-				log.Printf("client %d: send network open channel  response success.", idx)
+				utilities.SysLog.Infof("client %d: send network open channel  response success.", idx)
 			}
 
 		}
@@ -104,7 +104,7 @@ func startAClient(idx int, sn string) {
 var wg sync.WaitGroup
 
 func main() {
-	log.Println("Client example start!")
+	utilities.SysLog.Info("Client example start!")
 	sn := []string{
 		"E198402mqvw",
 		"M201307olje",
@@ -122,5 +122,5 @@ func main() {
 		go startAClient(1, sn[0])
 	//}
 	wg.Wait()
-	log.Println("Client example ends!")
+	utilities.SysLog.Info("Client example ends!")
 }

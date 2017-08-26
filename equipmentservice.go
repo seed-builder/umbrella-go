@@ -15,9 +15,7 @@ import (
 //EquipmentService is 单台设备管理服务，
 type EquipmentService struct {
 	EquipmentConns map[string]*network.Conn
-	WaitingHire map[string]uint
 	Requests map[uint8]chan string
-	Redoes map[uint8]*network.Packer
 }
 
 // ListenAndServe listens on the TCP network address addr
@@ -51,9 +49,13 @@ func (es *EquipmentService) ListenAndServe(addr string, ver  network.Type, t tim
 	if logWriter == nil {
 		logWriter = os.Stderr
 	}
-	server := &network.TcpServer{Addr: addr, Handler: handler, Typ: ver,
-		T: t, N: n,
-		ErrorLog: log.New(logWriter, "equipment server: ", log.LstdFlags)}
+	server := &network.TcpServer{
+		Addr: addr,
+		Handler: handler,
+		Typ: ver,
+		T: t,
+		N: n,
+	}
 	return server.ListenAndServe()
 }
 
@@ -63,13 +65,15 @@ func (es *EquipmentService) RegisterConn(equipmentSn string, conn *network.Conn)
 
 func (es *EquipmentService) OpenChannel(equipmentSn string, channelNum uint8) (uint8, uint8, error) {
 	conn, ok := es.EquipmentConns[equipmentSn]
-	if ok {
+	if ok && conn.State > 0  {
 		if channelNum == 0 {
 			channelNum = conn.Equipment.ChooseChannel()
 		}
+		var seqId uint8
 		req := &network.CmdUmbrellaOutReqPkt{}
 		req.ChannelNum = channelNum
-		seqId := <- conn.SeqId
+		seqId = <- conn.SeqId
+		utilities.SysLog.Infof("发送设备【%s】开启通道【%d】 命令 序列号【%d】!", equipmentSn, channelNum, seqId)
 		err := conn.SendPkt(req, seqId)
 
 		if err != nil {
@@ -77,10 +81,10 @@ func (es *EquipmentService) OpenChannel(equipmentSn string, channelNum uint8) (u
 		} else {
 			//重发
 			go func() {
-				time.Sleep(15 * time.Second)
+				time.Sleep(time.Duration(utilities.SysConfig.TcpResendInterval) * time.Second)
 				_, ok := es.Requests[seqId]
 				if ok {
-					log.Println("resend  OpenChannel request pkt !")
+					utilities.SysLog.Infof("重发设备【%s】开启通道【%d】 命令 序列号【%d】!", equipmentSn, channelNum, seqId)
 					conn.SendPkt(req, seqId)
 				}
 			}()
@@ -92,7 +96,8 @@ func (es *EquipmentService) OpenChannel(equipmentSn string, channelNum uint8) (u
 			return channelNum , seqId, nil
 		}
 	} else {
-		return 0, 0, errors.New("equipment is offline")
+		utilities.SysLog.Infof("设备【%s】离线无法发送命令!", equipmentSn)
+		return 0, 0, errors.New("设备离线，无法发送命令")
 	}
 }
 
@@ -102,9 +107,10 @@ func (es *EquipmentService) getKey(sn string, channelNum uint8) string {
 }
 
 func (es *EquipmentService) Close(){
+	utilities.SysLog.Notice("正常关闭服务")
 	for sn, conn := range es.EquipmentConns {
 		conn.Close()
-		log.Println("close conn sn: ", sn)
+		utilities.SysLog.Noticef("正常关闭设备【%s】连接", sn)
 	}
 }
 
@@ -116,6 +122,7 @@ func (es *EquipmentService) HandleConnect(r *network.Response, p *network.Packet
 		// go on to next handler
 		return true, nil
 	}
+	utilities.SysLog.Infof("收到设备登陆命令, 设备【%s】 序列号【%d】", req.EquipmentSn, req.SeqId)
 	resp := r.Packer.(*network.CmdConnectRspPkt)
 	resp.Status = utilities.RspStatusFail
 	if req.EquipmentSn != "" {
@@ -128,34 +135,30 @@ func (es *EquipmentService) HandleConnect(r *network.Response, p *network.Packet
 			r.Packet.Conn.SetEquipment(&eq)
 			es.RegisterConn(req.EquipmentSn, r.Packet.Conn)
 			resp.Status = utilities.RspStatusSuccess
-			l.Printf("connect success, sn: %s", req.EquipmentSn)
+			utilities.SysLog.Infof("设备登陆成功, 设备【%s】 序列号【%d】", req.EquipmentSn, req.SeqId)
 		}else{
 			resp.Status = utilities.RspStatusEquipmentSnIllegal
-			l.Printf("connect fail, sn: %s", req.EquipmentSn)
+			utilities.SysLog.Warningf("设备登陆失败, 设备【%s】 序列号【%d】", req.EquipmentSn, req.SeqId)
 		}
 	}
 	return true, nil
 }
 
 //handleUmbrellaIn: umbrella in channel request
-func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
+func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Packet, l *log.Logger) (bool, error) {
 	req, ok := p.Packer.(*network.CmdUmbrellaInReqPkt)
 	if !ok {
-		// not a connect request, ignore it,
-		// go on to next handler
 		return true, nil
 	}
-	l.Printf("handle the umbrella in request , %v", req)
+	utilities.SysLog.Infof("收到还伞命令, 设备【%s】,通道【%d】,伞编号【%X】, 序列号【%d】", r.Equipment.Sn,
+		req.ChannelNum, req.UmbrellaSn, req.SeqId)
 	resp := r.Packer.(*network.CmdUmbrellaInRspPkt)
-	if r.Packet.Conn.State != network.CONN_AUTHOK {
-		resp.Status = utilities.RspStatusNeedAuth
-		return false, nil
-	}else{
-		umbrella := models.Umbrella{}
-		sn := fmt.Sprintf("%X", req.UmbrellaSn)
-		resp.Status = umbrella.InEquipment(r.Packet.Conn.Equipment, sn, req.ChannelNum)
-		return true, nil
-	}
+
+	umbrella := models.Umbrella{}
+	sn := fmt.Sprintf("%X", req.UmbrellaSn)
+	resp.Status = umbrella.InEquipment(r.Equipment, sn, req.ChannelNum)
+	return true, nil
+
 }
 
 //HandleOpenChannelRsp
@@ -164,13 +167,14 @@ func (es *EquipmentService) HandleUmbrellaOutRsp(r *network.Response, p *network
 	if ok {
 		c, o := es.Requests[rsp.SeqId]
 		if o {
-			log.Printf("HandleUmbrellaOutRsp UmbrellaSn = %X ", rsp.UmbrellaSn)
+			utilities.SysLog.Infof("收到设备出伞反馈，设备【%s】,伞编号【%X】,状态【%s】,序列号【%d】",r.Equipment.Sn, rsp.UmbrellaSn, utilities.RspStatusDesc(rsp.Status), rsp.SeqId)
 			if rsp.Status == 1 {
 				c <- fmt.Sprintf("%X", rsp.UmbrellaSn)
 			}else{
 				close(c)
 			}
 			delete( es.Requests, rsp.SeqId )
+			utilities.SysLog.Infof("删除等待序列，伞编号【%X】， 序列号【%d】", rsp.UmbrellaSn, rsp.SeqId)
 		}
 	}
 	return true, nil
@@ -180,6 +184,7 @@ func (es *EquipmentService) HandleUmbrellaOutRsp(r *network.Response, p *network
 func (es *EquipmentService) HandleCmdIllegalRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error) {
 	resp, ok := r.Packer.(*network.CmdIllegalRspPkt)
 	if ok {
+		utilities.SysLog.Warning("收到非法命令")
 		resp.Status = utilities.RspStatusCmdIllegal
 	}
 	return false, nil

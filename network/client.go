@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net"
 	"strconv"
-	"log"
+	"umbrella/utilities"
 )
 
 var ErrNotCompleted = errors.New("data not being handled completed")
@@ -45,12 +45,12 @@ func (cli *Client) Connect(servAddr, sn string, timeout time.Duration) error {
 	req := &CmdConnectReqPkt{
 		EquipmentSn: sn,
 	}
-	log.Println("send connect request to server, sn = ", sn )
+	utilities.SysLog.Info("send connect request to server, sn = ", sn )
 	err = cli.SendReqPkt(req)
 	if err != nil {
 		return err
 	}
-	log.Println("send connect request to server, sn = ", sn )
+	utilities.SysLog.Info("send connect request to server, sn = ", sn )
 	ps, err := cli.conn.RecvAndUnpackPkt(0)
 	if err != nil {
 		return err

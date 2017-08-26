@@ -38,7 +38,7 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 		c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
 	})
 
-	r.POST("/equipment/:sn/open/:num", func(c *gin.Context) {
+	r.POST("/equipment/:sn/opennum/:num", func(c *gin.Context) {
 		sn :=  c.Param("sn")
 		num :=  c.Param("num")
 		cn, er := strconv.Atoi(num)
@@ -50,8 +50,11 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 			chan_sn, ok := EquipmentSrv.Requests[seqId]
 			if ok {
 				umbrellaSn := <- chan_sn
-				log.Println("channel opened!")
-
+				log.Println("channel opened! umbrellaSn : ", umbrellaSn)
+				if umbrellaSn == ""{
+					c.JSON(http.StatusOK, gin.H{"success": false, "err": "超时" })
+					return
+				}
 				if conn, ok := EquipmentSrv.EquipmentConns[sn]; ok {
 					conn.Equipment.OutChannel(channelNum)
 					umbrella := &models.Umbrella{}
@@ -74,8 +77,10 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 			chan_sn, ok := EquipmentSrv.Requests[seqId]
 			if ok {
 				umbrellaSn := <- chan_sn
-				log.Println("channel opened!")
-
+				if umbrellaSn == ""{
+					c.JSON(http.StatusOK, gin.H{"success": false, "err": "超时" })
+					return
+				}
 				if conn, ok := EquipmentSrv.EquipmentConns[sn]; ok {
 					conn.Equipment.OutChannel(channelNum)
 					umbrella := &models.Umbrella{}
@@ -85,7 +90,7 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 					hire := &models.CustomerHire{}
 					cid, _ := strconv.ParseUint(customerId, 10, 32)
 					hire.Create(conn.Equipment, umbrella, uint(cid))
-
+					go hire.FreezeDepositFee(umbrella)
 					c.JSON(http.StatusOK, gin.H{"success": true, "hire_id": hire.ID , "err": "" })
 					return
 				}
@@ -97,11 +102,7 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 	r.GET("/monitor", func(c *gin.Context) {
 		data := gin.H{}
 		for sn, conn := range EquipmentSrv.EquipmentConns{
-			data[sn] = gin.H{
-				"Status": conn.Equipment.Status,
-				"Channels": conn.Equipment.ChannelCache,
-				"UsedChannelNum": conn.Equipment.UsedChannelNum,
-			}
+			data[sn] = conn.Equipment
 		}
 		c.JSON(http.StatusOK, data)
 	})

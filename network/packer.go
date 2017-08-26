@@ -23,19 +23,7 @@ var ErrCommandIdInvalid = errors.New("command_Id in Packet data is invalid")
 var ErrCommandIdNotSupported = errors.New("command_Id in Packet data is not supported")
 var ErrConnNeedAuth = errors.New("illegal, need auth")
 
-
 type CommandId byte
-
-const (
-	CMD_REQUEST_MIN, CMD_RESPONSE_MIN CommandId = iota, 0x80 + iota
-	CMD_ACTIVE_TEST, CMD_ACTIVE_TEST_RESP
-	CMD_CONNECT, CMD_CONNECT_RESP
-	CMD_UMBRELLA_OUT, CMD_UMBRELLA_OUT_RESP
-	CMD_UMBRELLA_IN, CMD_UMBRELLA_IN_RESP
-	CMD_ILLEGAL, CMD_IILEGAL_RESP
-
-	CMD_REQUEST_MAX, CMD_RESPONSE_MAX
-)
 
 type Packer interface {
 	Pack(seqId uint8) ([]byte, error)
@@ -218,7 +206,6 @@ func (r *packetReader) ReadInt(order binary.ByteOrder, data interface{}) {
 	if r.err != nil {
 		return
 	}
-
 	err := binary.Read(r.rb, order, data)
 	if err != nil {
 		r.err = NewOpError(err,
