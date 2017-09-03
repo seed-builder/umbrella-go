@@ -130,7 +130,7 @@ func (es *EquipmentService) HandleConnect(r *network.Response, p *network.Packet
 		eq.Query().First(&eq, "sn = ?", req.EquipmentSn)
 		if eq.ID > 0 {
 			eq.InitChannel()
-			eq.Online()
+			eq.Online(r.Conn.Ip)
 			r.Packet.Conn.SetState( network.CONN_AUTHOK )
 			r.Packet.Conn.SetEquipment(&eq)
 			es.RegisterConn(req.EquipmentSn, r.Packet.Conn)

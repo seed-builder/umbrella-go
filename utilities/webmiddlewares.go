@@ -20,12 +20,12 @@ func VerifySign() gin.HandlerFunc {
 		sn :=  c.Param("sn")
 		customerId := c.Param("customerId")
 		sign := c.Query("sign")
-		psd := fmt.Sprintf("%d%s",  customerId, sn)
+		psd := fmt.Sprintf("%s%s",  customerId, sn)
 		sign2 := Md5Encrypt([]byte(psd), []byte(SysConfig.Salt))
 		if sign == sign2 {
 			c.Next()
 		}else{
-			c.JSON(http.StatusOK, gin.H{"success": false, "err": "sign error, the right is : " + sign2 })
+			c.JSON(http.StatusOK, gin.H{"success": false, "err": "sign error, s = 【"+psd+"】, the sign is 【"+ sign2 +"】 " })
 			c.Abort()
 		}
 	}

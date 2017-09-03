@@ -4,7 +4,6 @@ import (
 	"github.com/jinzhu/gorm"
 	"time"
 	"umbrella/utilities"
-	"sync"
 	"errors"
 )
 
@@ -39,10 +38,8 @@ type CustomerHire struct {
 
 	HireEquipment Equipment `gorm:"ForeignKey:HireEquipmentId"`
 	ReturnEquipment Equipment `gorm:"ForeignKey:ReturnEquipmentId"`
-
 }
 
-var w sync.WaitGroup
 
 func (CustomerHire) TableName() string {
 	return "customer_hires"

@@ -65,6 +65,7 @@ type Conn struct {
 	//done  chan<- struct{}
 
 	Equipment *models.Equipment
+	Ip string
 }
 
 func newSeqIdGenerator() (<-chan uint8, chan struct{}) {
@@ -100,6 +101,7 @@ func NewConn(svr *TcpServer, conn net.Conn, typ Type) *Conn {
 		Typ:   typ,
 		SeqId: seqId,
 		done:  done,
+		Ip: conn.RemoteAddr().String(),
 	}
 	tc := c.rw.(*net.TCPConn) // Always tcpconn
 	tc.SetKeepAlive(true) //Keepalive as default

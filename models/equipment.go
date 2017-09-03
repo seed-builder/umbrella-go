@@ -99,9 +99,9 @@ func (m *Equipment) OutChannel(channelNum uint8){
 	}
 }
 
-func (m *Equipment) Online(){
+func (m *Equipment) Online(ip string){
 	m.Status = EquipmentStatusOnline
-	utilities.MyDB.Model(m).Update("status", m.Status)
+	utilities.MyDB.Model(m).Updates(map[string]interface{}{"status":m.Status, "ip": ip})
 }
 
 func (m *Equipment) Offline(){
