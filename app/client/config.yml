@@ -5,8 +5,8 @@ tcp_test_timeout: 180
 tcp_test_max: 3
 debug: true
 db_dialect: mysql
-db_server: 127.0.0.1:3306
-db_user: root
-db_password:
+db_server: 39.108.180.41:3306
+db_user: umbrella
+db_password: 1q2w3e!@#
 db_database: umbrella
 salt: sfadfasdf

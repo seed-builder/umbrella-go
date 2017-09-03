@@ -106,6 +106,6 @@ func (m *Umbrella) OutEquipment(equipment *Equipment, umbrellaSn string, channel
 	m.EquipmentId = equipment.ID
 	m.EquipmentChannelNum = channelNum
 	m.SiteId = equipment.SiteId
-	go m.Save()
+	m.Save()
 	return utilities.RspStatusSuccess
 }

@@ -7,6 +7,8 @@ import (
 	"umbrella/models"
 	"strconv"
 	"strings"
+	"fmt"
+	"umbrella/utilities"
 )
 
 func LoadEquipmentRoutes(r gin.IRouter)  {
@@ -69,9 +71,11 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 		c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
 	})
 
-	r.POST("/customer/:customerId/hire/:sn", func(c *gin.Context) {
+	r.POST("/customer/:customerId/hire/:sn", utilities.VerifySign(), func(c *gin.Context) {
 		sn :=  c.Param("sn")
 		customerId := c.Param("customerId")
+		sign := c.Query("sign")
+		fmt.Println("sign = ", sign)
 		channelNum, seqId, err := EquipmentSrv.OpenChannel(sn, 0)
 		if err == nil {
 			chan_sn, ok := EquipmentSrv.Requests[seqId]
@@ -89,10 +93,14 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 					umbrella.OutEquipment(conn.Equipment, umbrellaSn, channelNum)
 					hire := &models.CustomerHire{}
 					cid, _ := strconv.ParseUint(customerId, 10, 32)
-					hire.Create(conn.Equipment, umbrella, uint(cid))
-					go hire.FreezeDepositFee(umbrella)
-					c.JSON(http.StatusOK, gin.H{"success": true, "hire_id": hire.ID , "err": "" })
-					return
+					suc, err := hire.Create(conn.Equipment, umbrella, uint(cid))
+					if suc {
+						go hire.FreezeDepositFee(umbrella)
+						c.JSON(http.StatusOK, gin.H{"success": true, "hire_id": hire.ID, "err": ""})
+						return
+					}else{
+						c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
+					}
 				}
 			}
 		}

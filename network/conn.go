@@ -373,7 +373,7 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) ([]Packer, error) {
 	}
 
 	if timeout != 0 {
-		t := time.Now().Add(timeout)
+		t := time.Now().Local().Add(timeout)
 		c.rw.SetReadDeadline(t)
 		defer c.rw.SetReadDeadline(noDeadline)
 	}

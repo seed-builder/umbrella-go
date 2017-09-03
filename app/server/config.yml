@@ -10,4 +10,4 @@ db_server: 127.0.0.1:3306
 db_user: root
 db_password:
 db_database: umbrella
-salt: sfadfasdf
+salt: kbLiBsZUsF6br2FyZ9UfRv74UU2ObNOj

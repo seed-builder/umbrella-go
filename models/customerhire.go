@@ -5,6 +5,7 @@ import (
 	"time"
 	"umbrella/utilities"
 	"sync"
+	"errors"
 )
 
 //(1-初始(未支付押金)，2-租借中, 3-还伞完毕，待支付租金 4-已完成, 5-逾期未归还)
@@ -51,23 +52,28 @@ func (m *CustomerHire) Query() *gorm.DB{
 	return utilities.MyDB.Model(m)
 }
 
-func (m *CustomerHire) Create(equipment *Equipment, umbrella *Umbrella, customerId uint) {
-	m.Entity = m
-	m.CustomerId = customerId
-	m.CreatorId = customerId
-	m.HireAt = time.Now()
-	m.UmbrellaId = umbrella.ID
-	m.HireEquipmentId = equipment.ID
-	m.HireSiteId = equipment.SiteId
-	m.Status = UmbrellaHireStatusNormal
-	m.Save()
+func (m *CustomerHire) Create(equipment *Equipment, umbrella *Umbrella, customerId uint) (bool, error) {
+	if umbrella.ID > 0 {
+		m.Entity = m
+		m.CustomerId = customerId
+		m.CreatorId = customerId
+		m.HireAt = time.Now().Local()
+		m.UmbrellaId = umbrella.ID
+		m.HireEquipmentId = equipment.ID
+		m.HireSiteId = equipment.SiteId
+		m.Status = UmbrellaHireStatusNormal
+		m.Save()
+		return true, nil
+	}else{
+		return  false, errors.New("伞ID不能为0")
+	}
 	//go m.FreezeDepositFee(umbrella)
 }
 
 //还伞
 func (hire *CustomerHire) UmbrellaReturn(umbrellaId uint, equipmentId uint, siteId uint) int32 {
 	hire.Query().First(&hire, "umbrella_id = ? and status = 2", umbrellaId)
-	now := time.Now()
+	now := time.Now().Local()
 	status := UmbrellaStatusIn
 	if hire.ID > 0 {
 		if hire.ExpiredAt.Before(now) {
@@ -75,7 +81,7 @@ func (hire *CustomerHire) UmbrellaReturn(umbrellaId uint, equipmentId uint, site
 			status = UmbrellaStatusExpired
 		} else {
 			hire.Status = UmbrellaHireStatusPaying
-			hire.ReturnAt = time.Now()
+			hire.ReturnAt = time.Now().Local()
 			hire.ReturnEquipmentId = equipmentId
 			hire.ReturnSiteId = siteId
 			status = UmbrellaStatusIn //UmbrellaStatusAbnormal
@@ -97,7 +103,7 @@ func (m *CustomerHire) FreezeDepositFee(umbrella *Umbrella){
 	if price.ID > 0 {
 		m.DepositAmt = price.DepositCash
 		m.ExpireDay = price.HireExpireDays
-		m.ExpiredAt =  time.Now().Add(time.Hour * 24 * time.Duration(price.HireExpireDays))
+		m.ExpiredAt =  time.Now().Local().Add(time.Hour * 24 * time.Duration(price.HireExpireDays))
 		m.Query().Updates(map[string]interface{}{
 			"deposit_amt": m.DepositAmt,
 			"expire_day": m.ExpireDay,

@@ -15,7 +15,7 @@ import (
 func restApi()  {
 	utilities.SysLog.Info("REST api 服务启动, 端口：", utilities.SysConfig.HttpPort)
 	r := gin.Default()
-	r.Use(cors())
+	r.Use(utilities.Cores())
 	// This handler will match /user/john but will not match neither /user/ or /user
 	r.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "Hello world!" )
@@ -33,12 +33,6 @@ func restApi()  {
 
 }
 
-func cors() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Next()
-	}
-}
 
 func equipmentSrv(){
 	//defer wg.Done()

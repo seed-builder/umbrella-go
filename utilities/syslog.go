@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-
+//系统log
 var SysLog = logging.MustGetLogger("umbrella")
 
 var format = logging.MustStringFormatter(
@@ -23,4 +23,12 @@ func init(){
 	backend1Leveled.SetLevel(logging.INFO, "")
 
 	logging.SetBackend(backend1Leveled, backend2Formatter)
+}
+
+//设备log
+func NewEquipmentLog(name string) *logging.Logger {
+	log := logging.MustGetLogger(name)
+
+
+	return log
 }

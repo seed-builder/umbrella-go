@@ -46,7 +46,7 @@ func (cp *CustomerPayment) PayFee(hireId uint, customerId uint, accountId uint, 
 	m.Remark = "借伞租金支出"
 	m.ReferenceId = hireId
 	m.ReferenceType = "customer_hire"
-	m.Sn = m.SN(m.CustomerId)
+	m.Sn = m.SN(m.CustomerId, 3)
 	m.Save()
 }
 
@@ -59,10 +59,10 @@ func (cp *CustomerPayment) PayDeposit(hireId uint, customerId uint, accountId ui
 	m.Amt = amt
 	m.Type = 3
 	m.Status = 2
-	m.Remark = "押金支付"
+	m.Remark = "押金支出"
 	m.ReferenceId = hireId
 	m.ReferenceType = "customer_hire"
-	m.Sn = m.SN(m.CustomerId)
+	m.Sn = m.SN(m.CustomerId, 1)
 	m.Save()
 }
 
@@ -78,10 +78,19 @@ func (cp *CustomerPayment) ReturnDeposit(hireId uint, customerId uint, accountId
 	m.Remark = "押金退回"
 	m.ReferenceId = hireId
 	m.ReferenceType = "customer_hire"
-	m.Sn = m.SN(m.CustomerId)
+	m.Sn = m.SN(m.CustomerId, 2)
 	m.Save()
 }
 
-func (m *CustomerPayment) SN(customerId uint) string {
-	return "YC" + fmt.Sprintf("%05d", customerId) + time.Now().Format("20060102150405")
+func (m *CustomerPayment) SN(customerId uint, typ int) string {
+	prefix := "YO"
+	switch typ {
+	case 1:
+		prefix = "YO"
+	case 2:
+		prefix = "YB"
+	case 3:
+		prefix = "HO"
+	}
+	return prefix + fmt.Sprintf("%05d", customerId) + time.Now().Format("20060102150405")
 }
