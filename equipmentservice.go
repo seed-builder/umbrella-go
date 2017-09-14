@@ -32,7 +32,9 @@ func (es *EquipmentService) ListenAndServe(addr string, ver  network.Type, t tim
 		network.HandlerFunc(es.HandleConnect),
 		network.HandlerFunc(es.HandleUmbrellaIn),
 		network.HandlerFunc(es.HandleUmbrellaOutRsp),
-		network.HandlerFunc(es.HandleCmdIllegalRsp),
+		network.HandlerFunc(es.HandleChannelInspectRsp),
+		network.HandlerFunc(es.HandleTakeUmbrellaRsp),
+		network.HandlerFunc(es.HandleUmbrellaInspect),
 	}
 
 	var handler network.Handler
@@ -70,10 +72,10 @@ func (es *EquipmentService) OpenChannel(equipmentSn string, channelNum uint8) (u
 			channelNum = conn.Equipment.ChooseChannel()
 		}
 		var seqId uint8
-		req := &network.CmdUmbrellaOutReqPkt{}
-		req.ChannelNum = channelNum
+		req := &network.CmdTakeUmbrellaReqPkt{}
+		req.Channel = channelNum
 		seqId = <- conn.SeqId
-		utilities.SysLog.Infof("发送设备【%s】开启通道【%d】 命令 序列号【%d】!", equipmentSn, channelNum, seqId)
+		utilities.SysLog.Infof("发送设备【%s】开启通道【%d】取伞命令 序列号【%d】!", equipmentSn, channelNum, seqId)
 		err := conn.SendPkt(req, seqId)
 
 		if err != nil {
@@ -84,8 +86,17 @@ func (es *EquipmentService) OpenChannel(equipmentSn string, channelNum uint8) (u
 				time.Sleep(time.Duration(utilities.SysConfig.TcpResendInterval) * time.Second)
 				_, ok := es.Requests[seqId]
 				if ok {
-					utilities.SysLog.Infof("重发设备【%s】开启通道【%d】 命令 序列号【%d】!", equipmentSn, channelNum, seqId)
+					utilities.SysLog.Infof("重发设备【%s】开启通道【%d】取伞命令 序列号【%d】!", equipmentSn, channelNum, seqId)
 					conn.SendPkt(req, seqId)
+				}
+			}()
+			//超时
+			go func() {
+				time.Sleep(time.Duration(utilities.SysConfig.TcpResendInterval * 2) * time.Second)
+				c, ok := es.Requests[seqId]
+				if ok {
+					utilities.SysLog.Warningf("设备【%s】开启通道【%d】取伞命令超时 序列号【%d】!", equipmentSn, channelNum, seqId)
+					close(c)
 				}
 			}()
 
@@ -114,7 +125,7 @@ func (es *EquipmentService) Close(){
 	}
 }
 
-//HandleConnect
+//HandleConnect 设备登陆服务器
 func (es *EquipmentService) HandleConnect(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
 	req, ok := p.Packer.(*network.CmdConnectReqPkt)
 	if !ok {
@@ -124,15 +135,15 @@ func (es *EquipmentService) HandleConnect(r *network.Response, p *network.Packet
 	}
 	utilities.SysLog.Infof("收到设备登陆命令, 设备【%s】 序列号【%d】", req.EquipmentSn, req.SeqId)
 	resp := r.Packer.(*network.CmdConnectRspPkt)
-	resp.Status = utilities.RspStatusFail
+	resp.Status = utilities.RspStatusUserWrong
 	if req.EquipmentSn != "" {
-		eq := models.Equipment{}
+		eq := &models.Equipment{}
 		eq.Query().First(&eq, "sn = ?", req.EquipmentSn)
 		if eq.ID > 0 {
 			eq.InitChannel()
 			eq.Online(r.Conn.Ip)
 			r.Packet.Conn.SetState( network.CONN_AUTHOK )
-			r.Packet.Conn.SetEquipment(&eq)
+			r.Packet.Conn.SetEquipment(eq)
 			es.RegisterConn(req.EquipmentSn, r.Packet.Conn)
 			resp.Status = utilities.RspStatusSuccess
 			utilities.SysLog.Infof("设备登陆成功, 设备【%s】 序列号【%d】", req.EquipmentSn, req.SeqId)
@@ -144,31 +155,52 @@ func (es *EquipmentService) HandleConnect(r *network.Response, p *network.Packet
 	return true, nil
 }
 
-//handleUmbrellaIn: umbrella in channel request
+//handleUmbrellaIn: 通道进伞
 func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Packet, l *log.Logger) (bool, error) {
 	req, ok := p.Packer.(*network.CmdUmbrellaInReqPkt)
 	if !ok {
 		return true, nil
 	}
 	utilities.SysLog.Infof("收到还伞命令, 设备【%s】,通道【%d】,伞编号【%X】, 序列号【%d】", r.Equipment.Sn,
-		req.ChannelNum, req.UmbrellaSn, req.SeqId)
+		req.Channel, req.UmbrellaSn, req.SeqId)
 	resp := r.Packer.(*network.CmdUmbrellaInRspPkt)
 
-	umbrella := models.Umbrella{}
+	umbrella := &models.Umbrella{}
 	sn := fmt.Sprintf("%X", req.UmbrellaSn)
-	resp.Status = umbrella.InEquipment(r.Equipment, sn, req.ChannelNum)
+	resp.Status = umbrella.InEquipment(r.Equipment, sn, req.Channel)
 	return true, nil
 
 }
 
-//HandleOpenChannelRsp
+//HandleTakeUmbrella: 通道取伞， 成功则发送出伞命令
+func (es *EquipmentService) HandleTakeUmbrellaRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error) {
+	rsp, ok := p.Packer.(*network.CmdTakeUmbrellaRspPkt)
+	if ok {
+		utilities.SysLog.Infof("收到设备取伞反馈，设备【%s】,伞编号【%X】,状态【%s】,序列号【%d】",r.Equipment.Sn, rsp.UmbrellaSn, utilities.RspStatusDesc(rsp.Status), rsp.SeqId)
+		if rsp.Status == utilities.RspStatusSuccess{
+			umbrella := &models.Umbrella{}
+			sn := fmt.Sprintf("%X", rsp.UmbrellaSn)
+			status := umbrella.Check(sn)
+			if status != utilities.RspStatusSuccess {
+				r.Packer = nil
+				c, ok := es.Requests[rsp.SeqId]
+				if ok {
+					close(c)
+				}
+			}
+		}
+	}
+	return true, nil
+}
+
+//HandleUmbrellaOutRsp 通道出伞
 func (es *EquipmentService) HandleUmbrellaOutRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error) {
 	rsp, ok := p.Packer.(*network.CmdUmbrellaOutRspPkt)
 	if ok {
 		c, o := es.Requests[rsp.SeqId]
 		if o {
 			utilities.SysLog.Infof("收到设备出伞反馈，设备【%s】,伞编号【%X】,状态【%s】,序列号【%d】",r.Equipment.Sn, rsp.UmbrellaSn, utilities.RspStatusDesc(rsp.Status), rsp.SeqId)
-			if rsp.Status == 1 {
+			if rsp.Status == utilities.RspStatusSuccess {
 				c <- fmt.Sprintf("%X", rsp.UmbrellaSn)
 			}else{
 				close(c)
@@ -180,14 +212,34 @@ func (es *EquipmentService) HandleUmbrellaOutRsp(r *network.Response, p *network
 	return true, nil
 }
 
-//HandleCmdIllegalRsp
-func (es *EquipmentService) HandleCmdIllegalRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error) {
-	resp, ok := r.Packer.(*network.CmdIllegalRspPkt)
+//HandleChannelInspectRsp: 设备通道检查反馈
+func (es *EquipmentService) HandleChannelInspectRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
+	rsp, ok := p.Packer.(*network.CmdChannelInspectRspPkt)
 	if ok {
-		utilities.SysLog.Warning("收到非法命令")
-		resp.Status = utilities.RspStatusCmdIllegal
+		utilities.SysLog.Infof("收到设备通道检查反馈，设备【%s】,通道【%d】,状态【%s】,序列号【%d】",r.Equipment.Sn, rsp.Channel, utilities.RspStatusDesc(rsp.Status), rsp.SeqId)
+		p.Conn.Equipment.SetChannelStatus(rsp.Channel, rsp.Status)
 	}
-	return false, nil
+	return true, nil
+}
+
+//HandleUmbrellaInspect 设备发起的伞SN 检查
+func (es *EquipmentService) HandleUmbrellaInspect(r *network.Response, p *network.Packet, l *log.Logger) (bool, error)  {
+	req, ok := p.Packer.(*network.CmdUmbrellaInspectReqPkt)
+	if ok {
+		resp := r.Packer.(*network.CmdUmbrellaInspectRspPkt)
+		utilities.SysLog.Infof("收到伞SN检查命令, 设备【%s】,通道【%d】,伞编号【%X】, 序列号【%d】", r.Equipment.Sn,
+			req.Channel, req.UmbrellaSn, req.SeqId)
+
+		umbrella := &models.Umbrella{}
+		sn := fmt.Sprintf("%X", req.UmbrellaSn)
+		status := umbrella.InEquipment(r.Equipment, sn, req.Channel)
+		if status == utilities.RspStatusSuccess{
+			resp.Status = utilities.RspStatusUmbrellaReturned
+		}else{
+			resp.Status = status
+		}
+	}
+	return true, nil
 }
 
 var EquipmentSrv *EquipmentService

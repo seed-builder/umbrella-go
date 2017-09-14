@@ -5,8 +5,9 @@ import (
 	"sync"
 	"umbrella/network"
 	"umbrella/utilities"
-	//"math/rand"
+	"math/rand"
 	//"encoding/hex"
+	"encoding/hex"
 )
 
 const (
@@ -36,24 +37,24 @@ func startAClient(idx int, sn string) {
 	}
 	utilities.SysLog.Infof("client %d: connect and auth ok", idx)
 
-	t := time.NewTicker(time.Second * 5)
+	t := time.NewTicker(time.Second * 10)
 	defer t.Stop()
 	for {
 		select {
 		case <-t.C:
-			//p :=  &network.CmdUmbrellaInReqPkt{}
-			//p.ChannelNum = uint8(rand.Intn(5))
-			//var i = rand.Intn(5)
-			//sn := umbrellaSns[i]
-			//utilities.SysLog.Infof("client %d: prepare to send a umbrella in request  SN: %s,  ChannelNum: %d.", idx, sn, p.ChannelNum)
-			//p.UmbrellaSn, _ = hex.DecodeString(sn)
-			//err = c.SendReqPkt(p)
-			//utilities.SysLog.Infof("client %d: send a umbrella in request : %v.", idx, p)
-			//if err != nil {
-			//	utilities.SysLog.Infof("client %d: send a umbrella in request error: %s.", idx, err)
-			//} else {
-			//	utilities.SysLog.Infof("client %d: send a umbrella in request ok", idx)
-			//}
+			p :=  &network.CmdUmbrellaInspectReqPkt{}
+			p.Channel = 1
+			var i = rand.Intn(5)
+			sn := umbrellaSns[i]
+			//utilities.SysLog.Infof("client %d: prepare to send a CmdUmbrellaInspectReqPkt request  SN: %s,  ChannelNum: %d.", idx, sn, p.Channel)
+			p.UmbrellaSn, _ = hex.DecodeString(sn)
+			err = c.SendReqPkt(p)
+			utilities.SysLog.Infof("client %d: send a CmdUmbrellaInspectReqPkt in request : %v.", idx, p)
+			if err != nil {
+				utilities.SysLog.Infof("client %d: send a CmdUmbrellaInspectReqPkt in request error: %s.", idx, err)
+			} else {
+				utilities.SysLog.Infof("client %d: send a CmdUmbrellaInspectReqPkt in request ok", idx)
+			}
 			break
 		default:
 		}
@@ -70,7 +71,9 @@ func startAClient(idx int, sn string) {
 
 		case *network.CmdActiveTestReqPkt:
 			utilities.SysLog.Infof("client %d: receive a network active request: %v.", idx, p)
-			rsp := &network.CmdActiveTestRspPkt{}
+			rsp := &network.CmdActiveTestRspPkt{
+				Status: utilities.RspStatusSuccess,
+			}
 			err := c.SendRspPkt(rsp, p.SeqId)
 			if err != nil {
 				utilities.SysLog.Infof("client %d: send network active response error: %s.", idx, err)
@@ -79,16 +82,50 @@ func startAClient(idx int, sn string) {
 				utilities.SysLog.Infof("client %d: send network active response success.", idx)
 			}
 
+		case *network.CmdChannelInspectReqPkt:
+			utilities.SysLog.Infof("client %d: receive a network channel inspect request: %v.", idx, p)
+			rsp := &network.CmdChannelInspectRspPkt{
+				CmdData: network.CmdData{
+					Channel: p.Channel,
+				},
+				Status: utilities.RspStatusSuccess,
+			}
+			err := c.SendRspPkt(rsp, p.SeqId)
+			if err != nil {
+				utilities.SysLog.Infof("client %d: send network open channel  response error: %s.", idx, err)
+				break
+			}else{
+				utilities.SysLog.Infof("client %d: send network open channel  response success.", idx)
+			}
+
 		case *network.CmdUmbrellaInRspPkt:
 			utilities.SysLog.Infof("client %d: receive a network umbrella in response: %v.", idx, p)
+
+		case *network.CmdUmbrellaInspectRspPkt:
+			utilities.SysLog.Infof("client %d: receive a network CmdUmbrellaInspectRspPkt in response: %v.", idx, p)
+
+		case *network.CmdTakeUmbrellaReqPkt:
+			utilities.SysLog.Infof("client %d: receive a network take umbrella request: %v.", idx, p)
+			rsp := &network.CmdTakeUmbrellaRspPkt{
+				Status: utilities.RspStatusSuccess,
+				UmbrellaSn: []byte{0x88, 0x04, 0xe3, 0x84},
+			}
+			rsp.Channel = p.Channel
+			err := c.SendRspPkt(rsp, p.SeqId)
+			if err != nil {
+				utilities.SysLog.Infof("client %d: send network take umbrella   response error: %s.", idx, err)
+				break
+			}else{
+				utilities.SysLog.Infof("client %d: send network take umbrella  response success.", idx)
+			}
 
 		case *network.CmdUmbrellaOutReqPkt:
 			utilities.SysLog.Infof("client %d: receive a network open channel request: %v.", idx, p)
 			rsp := &network.CmdUmbrellaOutRspPkt{
-				Status: 1,
-				UmbrellaSn: []byte{0x88, 0x04, 0xe3, 0x84},
+				Status: utilities.RspStatusSuccess,
+				UmbrellaSn: p.UmbrellaSn,
 			}
-			time.Sleep(6*time.Second)
+			rsp.Channel = p.Channel
 			err := c.SendRspPkt(rsp, p.SeqId)
 			if err != nil {
 				utilities.SysLog.Infof("client %d: send network open channel  response error: %s.", idx, err)

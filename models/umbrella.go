@@ -73,6 +73,9 @@ func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelN
 		utilities.SysLog.Warningf("伞过期编号【%s】,禁止进入通道", umbrellaSn)
 		return utilities.RspStatusUmbrellaExpired
 	}
+	if m.Status == UmbrellaStatusIn {
+		return utilities.RspStatusSuccess
+	}
 	m.Entity = m
 	m.EquipmentId = equipment.ID
 	m.EquipmentChannelNum = channelNum

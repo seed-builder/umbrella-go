@@ -8,22 +8,9 @@ import (
 	"errors"
 )
 
-const (
-	CMD_HEADER_LEN  uint32 = 12
-	CMD_PACKET_MAX uint32 = 2477
-	CMD_PACKET_MIN uint32 = 12
-)
-
 // Common errors.
 var ErrMethodParamsInvalid = errors.New("params passed to method is invalid")
 
-// Protocol errors.
-var ErrTotalLengthInvalid = errors.New("total_length in Packet data is invalid")
-var ErrCommandIdInvalid = errors.New("command_Id in Packet data is invalid")
-var ErrCommandIdNotSupported = errors.New("command_Id in Packet data is not supported")
-var ErrConnNeedAuth = errors.New("illegal, need auth")
-
-type CommandId byte
 
 type Packer interface {
 	Pack(seqId uint8) ([]byte, error)
@@ -94,11 +81,24 @@ func (w *packetWriter) WriteByte(b byte) {
 	if w.err != nil {
 		return
 	}
-
 	err := w.wb.WriteByte(b)
 	if err != nil {
 		w.err = NewOpError(err,
 			fmt.Sprintf("packetWriter.WriteByte writes: %x", b))
+		return
+	}
+}
+
+// WriteInt appends the byte of b to the inner buffer, growing the buffer as
+// needed.
+func (w *packetWriter) WriteBytes(b []byte) {
+	if w.err != nil {
+		return
+	}
+	_, err := w.wb.Write(b)
+	if err != nil {
+		w.err = NewOpError(err,
+			fmt.Sprintf("packetWriter.WriteBytes writes: %x", b))
 		return
 	}
 }

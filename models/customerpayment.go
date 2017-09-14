@@ -14,7 +14,7 @@ type CustomerPayment struct {
 	CustomerAccountId uint
 	Sn string
 	OuterOrderSn string
-	PaymentChannel uint
+	PaymentChannel uint //支付渠道 1-微信支付 2-支付宝, 3-余额支付
 	Amt float64
 	//流水类型 1-充值（收入）， 2-押金充值， 3-押金支出， 4-押金退回， 5-借伞租金支出， 6-账户提现")
 	Type uint
@@ -46,6 +46,7 @@ func (cp *CustomerPayment) PayFee(hireId uint, customerId uint, accountId uint, 
 	m.Remark = "借伞租金支出"
 	m.ReferenceId = hireId
 	m.ReferenceType = "customer_hire"
+	m.PaymentChannel = 3
 	m.Sn = m.SN(m.CustomerId, 3)
 	m.Save()
 }

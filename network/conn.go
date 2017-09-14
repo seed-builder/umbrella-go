@@ -24,6 +24,7 @@ const (
 var (
 	ErrConnIsClosed = errors.New("连接已关闭")
 	ErrCmdIllegal = errors.New("非法命令")
+	ErrCmdDataLengthWrong = errors.New("数据长度错误")
 )
 
 var noDeadline = time.Time{}
@@ -36,14 +37,22 @@ const (
 	CONN_AUTHOK
 )
 
+//命令
 const (
-	CMD_REQUEST_MIN, CMD_RESPONSE_MIN CommandId = iota, 0x80 + iota
-	CMD_ACTIVE_TEST, CMD_ACTIVE_TEST_RESP
-	CMD_CONNECT, CMD_CONNECT_RESP
-	CMD_UMBRELLA_OUT, CMD_UMBRELLA_OUT_RESP
-	CMD_UMBRELLA_IN, CMD_UMBRELLA_IN_RESP
-	CMD_ILLEGAL, CMD_IILEGAL_RESP
-	CMD_REQUEST_MAX, CMD_RESPONSE_MAX
+	CMD_ACTIVE_TEST uint8 = 0x01
+	CMD_ACTIVE_TEST_RESP uint8 = 0x81
+	CMD_CONNECT uint8 = 0x02
+    CMD_CONNECT_RESP uint8 = 0x82
+	CMD_CHANNEL_INSPECT uint8 = 0x41
+	CMD_CHANNEL_INSPECT_RESP uint8 = 0xB1
+	CMD_CHANNEL_TAKE_UMBRELLA uint8 = 0x42
+	CMD_CHANNEL_TAKE_UMBRELLA_RESP uint8 = 0xB2
+	CMD_CHANNEL_UMBRELLA_OUT uint8 = 0x43
+	CMD_CHANNEL_UMBRELLA_OUT_RESP uint8 = 0xB3
+	CMD_CHANNEL_UMBRELLA_IN uint8 = 0x44
+	CMD_CHANNEL_UMBRELLA_IN_RESP uint8 = 0xB4
+	CMD_UMBRELLA_INSPECT uint8 = 0x45
+	CMD_UMBRELLA_INSPECT_RESP uint8 = 0xB5
 )
 
 type Conn struct {
@@ -73,12 +82,12 @@ func newSeqIdGenerator() (<-chan uint8, chan struct{}) {
 	done := make(chan struct{})
 
 	go func() {
-		var i uint8
+		var i uint8 = 1
 		for {
 			select {
 			case out <- i:
 				if i >= 255 {
-					i = 0
+					i = 1
 				}else{
 					i ++
 				}
@@ -129,11 +138,7 @@ func (c *Conn) Serve() {
 		rs, err := c.readPacket()
 		if err != nil {
 			if e, ok := err.(net.Error); ok && e.Timeout() {
-				utilities.SysLog.Warningf("读取命令超时：%v ", err)
-				continue
-			}
-			if err == ErrCmdIllegal {
-				utilities.SysLog.Warning("非法命令")
+				utilities.SysLog.Debugf("读取命令超时：%v ", err)
 				continue
 			}
 			utilities.SysLog.Errorf("读取命令错误：%v ", err)
@@ -184,34 +189,12 @@ func (c *Conn) parseResponse(i Packer) (*Response, error)  {
 		rsp = &Response{
 			Packet: pkt,
 			Packer: &CmdConnectRspPkt{
-				SeqId: p.SeqId,
+				CmdData: CmdData{
+					SeqId: p.SeqId,
+				},
 			},
 			SeqId: p.SeqId,
 		}
-
-	case *CmdUmbrellaOutReqPkt:
-		pkt = &Packet{
-			Packer: p,
-			Conn:   c,
-		}
-
-		rsp = &Response{
-			Packet: pkt,
-			Packer: &CmdUmbrellaOutRspPkt{
-				SeqId: p.SeqId,
-			},
-			SeqId: p.SeqId,
-		}
-
-	case *CmdUmbrellaOutRspPkt:
-		pkt = &Packet{
-			Packer: p,
-			Conn:   c,
-		}
-		rsp = &Response{
-			Packet: pkt,
-		}
-
 	case *CmdUmbrellaInReqPkt:
 		pkt = &Packet{
 			Packer: p,
@@ -220,24 +203,65 @@ func (c *Conn) parseResponse(i Packer) (*Response, error)  {
 		rsp = &Response{
 			Packet: pkt,
 			Packer: &CmdUmbrellaInRspPkt{
-				SeqId: p.SeqId,
-				ChannelNum: p.ChannelNum,
+				CmdData: CmdData{
+					SeqId: p.SeqId,
+					Channel: p.Channel,
+				},
+				UmbrellaSn: p.UmbrellaSn,
+				Status: utilities.RspStatusSuccess,
 			},
 			SeqId: p.SeqId,
 		}
-
 	case *CmdActiveTestReqPkt:
 		pkt = &Packet{
 			Packer: p,
 			Conn:   c,
 		}
-
 		rsp = &Response{
 			Packet: pkt,
-			Packer: &CmdActiveTestRspPkt{},
+			Packer: &CmdActiveTestRspPkt{
+				CmdData: CmdData{
+					SeqId: p.SeqId,
+					Channel: p.Channel,
+				},
+				Status: utilities.RspStatusSuccess,
+			},
 			SeqId: p.SeqId,
 		}
-	case *CmdActiveTestRspPkt:
+	case *CmdUmbrellaInspectReqPkt:
+		pkt = &Packet{
+			Packer: p,
+			Conn:   c,
+		}
+		rsp = &Response{
+			Packet: pkt,
+			Packer: &CmdUmbrellaInspectRspPkt{
+				CmdData: CmdData{
+					SeqId: p.SeqId,
+					Channel: p.Channel,
+				},
+				UmbrellaSn: p.UmbrellaSn,
+				Status: utilities.RspStatusSuccess,
+			},
+			SeqId: p.SeqId,
+		}
+	case *CmdTakeUmbrellaRspPkt:
+		pkt = &Packet{
+			Packer: p,
+			Conn:   c,
+		}
+		rsp = &Response{
+			Packet: pkt,
+			Packer: &CmdUmbrellaOutReqPkt{
+				CmdData: CmdData{
+					SeqId: p.SeqId,
+					Channel: p.Channel,
+				},
+				UmbrellaSn: p.UmbrellaSn,
+			},
+			SeqId: p.SeqId,
+		}
+	case *CmdChannelInspectRspPkt,*CmdUmbrellaOutRspPkt,*CmdActiveTestRspPkt:
 		pkt = &Packet{
 			Packer: p,
 			Conn:   c,
@@ -245,16 +269,6 @@ func (c *Conn) parseResponse(i Packer) (*Response, error)  {
 		rsp = &Response{
 			Packet: pkt,
 		}
-	case *CmdIllegalRspPkt:
-		pkt = &Packet{
-			Packer: p,
-			Conn:   c,
-		}
-		rsp = &Response{
-			Packet: pkt,
-			Packer: p,
-		}
-
 	default:
 		return nil, NewOpError(ErrUnsupportedPkt,
 			fmt.Sprintf("readPacket: receive unsupported packet type: %#v", p))
@@ -303,7 +317,7 @@ func (c *Conn) startActiveTest(){
 				}
 				// send a active test packet to peer, increase the active test counter
 				p := &CmdActiveTestReqPkt{}
-				err := c.SendPkt(p, <- c.SeqId)
+				err := c.SendPkt(p, 0)
 				utilities.SysLog.Infof("向客户端【%v】发送维持包数据 ", c.rw.RemoteAddr())
 				if err != nil {
 					utilities.SysLog.Infof("向客户端【%v】发送维持包数据错误【$s】", c.rw.RemoteAddr(), err)
@@ -336,6 +350,22 @@ func (c *Conn) SetState(state State) {
 
 func (c *Conn) SetEquipment(equipment *models.Equipment){
 	c.Equipment = equipment
+	go func(){
+		time.Sleep(1*time.Second)
+		c.ChannelInspect()
+	}()
+}
+
+func (c *Conn) ChannelInspect(){
+	for _, channel := range c.Equipment.ChannelCache{
+		time.Sleep(1*time.Second)
+		req := &CmdChannelInspectReqPkt{
+			CmdData: CmdData{ Channel: channel.Id, },
+		}
+		seqId := <- c.SeqId
+		utilities.SysLog.Infof("发送通道检测命令设备【%s】通道【%d】序号【%d】", c.Equipment.Sn, channel.Id, seqId)
+		c.SendPkt(req, seqId)
+	}
 }
 
 // SendPkt pack the CMD packet structure and send it to the other peer.
@@ -344,23 +374,16 @@ func (c *Conn) SendPkt(packet Packer, seqId uint8) error {
 		return ErrConnIsClosed
 	}
 	var buf []byte
-	buf = append(buf, 0xAA)
+	buf = append(buf, CMDHEAD)
 	data, err := packet.Pack(seqId)
 	if err != nil {
 		return err
 	}
-	//add content
-	var sum byte
-	for _, d := range data {
-		sum += d
-		buf = append(buf, d)
-	}
-	//add crc
-	buf = append(buf, sum)
-	buf = append(buf, 0x55)
+	buf = append(buf, data...)
+	buf = append(buf, CMDFOOT)
 
 	_, err = c.rw.Write(buf) //block write
-	utilities.SysLog.Infof("发送命令【%x】序列号【%d】", buf[:], seqId)
+	utilities.SysLog.Infof("发送命令【%s】长度【%d】序列号【%d】命令ID【%X】通道【%d】数据【%x】", CmdDesc(data[2]), data[0], data[1], data[2], data[3], data[4:])
 	buf = nil
 	if err != nil {
 		return err
@@ -393,8 +416,10 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) ([]Packer, error) {
 	var packers []Packer
 	if  num > 0 {
 		for _, cmd := range cmds {
-			utilities.SysLog.Infof("解析命令详情数据【%x】.", cmd)
-			p, err := c.CheckAndUnpackPkt(cmd)
+			//utilities.SysLog.Infof("解析命令详情数据【%x】.", cmd)
+			utilities.SysLog.Infof("接收到的命令详情：【%s】长度【%d】序列号【%d】命令ID【%X】通道【%d】数据【%x】", CmdDesc(cmd[2]), cmd[0], cmd[1], cmd[2], cmd[3], cmd[4:])
+			cd := &CmdData{}
+			p, err := cd.ParseCmdData(cmd)
 			if err == nil {
 				packers = append(packers, p)
 			}else{
@@ -435,97 +460,37 @@ func (c *Conn) ParsePkt(len int, data []byte) [][]byte {
 	return result
 }
 
-func (c *Conn) CheckAndUnpackPkt(leftData []byte) (Packer, error)  {
-	length := len(leftData)
-	data := leftData[:length - 1]
-	var sum uint8
-	for _, d := range data {
-		sum += uint8(d)
-	}
-	crc := uint8(leftData[length - 1])
-	if crc != sum {
-		return nil, ErrCmdIllegal
-	}
-	//totalLen := uint8(leftData[1])
-	//seq id
-	seqId := uint8(leftData[1])
-	// Command_Id
-	commandId := CommandId(leftData[2])
-
-	utilities.SysLog.Infof("命令【%x】总长度【%d】,编号【%x】【%s】, 序列号【%d】 ", leftData, length, commandId, CmdDesc(commandId), seqId)
-	// The left packet data (start from seqId in header).
-
-	var p Packer
-	canUnpack := true
-	switch commandId {
-	case CMD_CONNECT:
-		p = &CmdConnectReqPkt{
-			SeqId: seqId,
-		}
-	case CMD_CONNECT_RESP:
-		p = &CmdConnectRspPkt{
-			SeqId: seqId,
-		}
-	case CMD_UMBRELLA_OUT:
-		p = &CmdUmbrellaOutReqPkt{
-			SeqId: seqId,
-		}
-	case CMD_UMBRELLA_OUT_RESP:
-		p = &CmdUmbrellaOutRspPkt{
-			SeqId: seqId,
-		}
-	case CMD_UMBRELLA_IN:
-		p = &CmdUmbrellaInReqPkt{
-			SeqId: seqId,
-		}
-	case CMD_UMBRELLA_IN_RESP:
-		p = &CmdUmbrellaInRspPkt{
-			SeqId: seqId,
-		}
-	case CMD_ACTIVE_TEST:
-		p = &CmdActiveTestReqPkt{
-			SeqId: seqId,
-		}
-	case CMD_ACTIVE_TEST_RESP:
-		p = &CmdActiveTestRspPkt{
-			SeqId: seqId,
-		}
-	default:
-		p = &CmdIllegalRspPkt{
-			SeqId: seqId,
-		}
-		canUnpack = false
-		//return nil, ErrCommandIdNotSupported
-	}
-	if canUnpack && (length-1) > 3 {
-		err := p.Unpack(leftData[3:length-1])
-		if err != nil {
-			utilities.SysLog.Warningf(" 解析命令详情数据错误： %v ", err)
-			return nil, err
-		}
-	}
-	return p, nil
-}
-
-func CmdDesc(cmdId CommandId) string {
+func CmdDesc(cmdId uint8) string {
 	var desc string
 	switch cmdId {
 	case CMD_CONNECT:
 		desc = "登陆请求"
 	case CMD_CONNECT_RESP:
 		desc = "登陆响应"
-	case CMD_UMBRELLA_OUT:
+	case CMD_CHANNEL_TAKE_UMBRELLA:
+		desc = "取伞请求"
+	case CMD_CHANNEL_TAKE_UMBRELLA_RESP:
+		desc = "取伞响应"
+	case CMD_CHANNEL_UMBRELLA_OUT:
 		desc = "出伞请求"
-	case CMD_UMBRELLA_OUT_RESP:
+	case CMD_CHANNEL_UMBRELLA_OUT_RESP:
 		desc = "出伞响应"
-	case CMD_UMBRELLA_IN:
+	case CMD_CHANNEL_UMBRELLA_IN:
 		desc = "进伞请求"
-	case CMD_UMBRELLA_IN_RESP:
+	case CMD_CHANNEL_UMBRELLA_IN_RESP:
 		desc = "进伞响应"
 	case CMD_ACTIVE_TEST:
 		desc = "维持包请求"
 	case CMD_ACTIVE_TEST_RESP:
 		desc = "维持包响应"
+	case CMD_CHANNEL_INSPECT:
+		desc = "通道检查"
+	case CMD_CHANNEL_INSPECT_RESP:
+		desc = "通道检查响应"
+	case CMD_UMBRELLA_INSPECT:
+		desc = "伞SN检查"
+	case CMD_UMBRELLA_INSPECT_RESP:
+		desc = "伞SN检查响应"
 	}
 	return desc
 }

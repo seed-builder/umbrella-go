@@ -68,7 +68,7 @@ func (cli *Client) Connect(servAddr, sn string, timeout time.Duration) error {
 		return err
 	}
 
-	if status != 1 {
+	if status != 0 {
 		//err = ConnRspStatusErrMap[status]
 		return errors.New("Conn Rsp StatusErr status: " + strconv.Itoa(int(status)))
 	}

@@ -25,7 +25,7 @@ type Equipment struct {
 	Ip string
 	Status int32
 	Channels uint8
-	ChannelCache map[uint8]uint8 `gorm:"-"`
+	ChannelCache map[uint8]*Channel `gorm:"-"`
 	UsedChannelNum uint8 `gorm:"-"`
 }
 
@@ -53,13 +53,13 @@ func (m *Equipment) Query() *gorm.DB{
 }
 
 func (m *Equipment) InitChannel() {
-	m.ChannelCache = make(map[uint8]uint8, m.Channels)
-	umbrella := Umbrella{}
+	m.ChannelCache = make(map[uint8]*Channel, m.Channels)
+	umbrella := &Umbrella{}
 	var have int32
 	for i := uint8(1); i <= m.Channels; i ++ {
 		var count uint8
 		umbrella.Query().Where("status=2 and equipment_id = ? and equipment_channel_num = ?", m.ID, i).Count(&count)
-		m.ChannelCache[i] = count
+		m.ChannelCache[i] = &Channel{ Id: i, Umbrellas: count, }
 		have =  have + int32(count)
 	}
 	m.Have = have
@@ -71,9 +71,9 @@ func (m *Equipment) ChooseChannel() uint8 {
 	var len uint8
 	channelNum := uint8(1)
 	for n, l :=  range m.ChannelCache {
-		if n != m.UsedChannelNum && l > len {
+		if n != m.UsedChannelNum && l.Status != utilities.RspStatusChannelTimeout &&l.Umbrellas > len {
 			channelNum = n
-			len = l
+			len = l.Umbrellas
 		}
 	}
 	if len == 0 && m.UsedChannelNum > 0 {
@@ -84,7 +84,7 @@ func (m *Equipment) ChooseChannel() uint8 {
 
 func (m *Equipment) InChannel(channelNum uint8){
 	n := m.ChannelCache[channelNum]
-	m.ChannelCache[channelNum] = n + 1
+	n.Umbrellas = n.Umbrellas + 1
 	m.UsedChannelNum = channelNum
 	m.Have = m.Have + 1
 	utilities.MyDB.Model(m).Update("have", m.Have )
@@ -92,8 +92,8 @@ func (m *Equipment) InChannel(channelNum uint8){
 
 func (m *Equipment) OutChannel(channelNum uint8){
 	n := m.ChannelCache[channelNum]
-	if n > 0 {
-		m.ChannelCache[channelNum] = n - 1
+	if n.Umbrellas > 0 {
+		n.Umbrellas = n.Umbrellas - 1
 		m.Have = m.Have - 1
 		utilities.MyDB.Model(m).Update("have", m.Have)
 	}
@@ -108,3 +108,12 @@ func (m *Equipment) Offline(){
 	m.Status = EquipmentStatusOffline
 	utilities.MyDB.Model(m).Update("status", m.Status)
 }
+
+func (m *Equipment)SetChannelStatus(num uint8, status uint8){
+	n := m.ChannelCache[num]
+	n.Status = status
+	if status == utilities.RspStatusChannelTimeout {
+		n.Timeouts ++
+	}
+}
+
