@@ -96,7 +96,7 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 					suc, err := hire.Create(conn.Equipment, umbrella, uint(cid))
 					if suc {
 						go hire.FreezeDepositFee(umbrella)
-						c.JSON(http.StatusOK, gin.H{"success": true, "hire_id": hire.ID, "err": ""})
+						c.JSON(http.StatusOK, gin.H{"success": true, "hire_id": hire.ID, "channel": channelNum, "err": ""})
 						return
 					}else{
 						c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
