@@ -66,11 +66,11 @@ func (m *Umbrella) Check(umbrellaSn string) uint8 {
 func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8)  uint8 {
 	m.Query().First(m, "sn = ?", strings.ToUpper(umbrellaSn))
 	if m.ID == 0 {
-		utilities.SysLog.Warningf("非法伞编号【%s】,禁止进入通道", umbrellaSn)
+		utilities.SysLog.Warningf("设备【%s】非法伞编号【%s】,禁止进入通道【%d】", equipment.Sn, umbrellaSn, channelNum)
 		return utilities.RspStatusUmbrellaIllegal
 	}
 	if m.Status == UmbrellaStatusExpired {
-		utilities.SysLog.Warningf("伞过期编号【%s】,禁止进入通道", umbrellaSn)
+		utilities.SysLog.Warningf("设备【%s】伞过期编号【%s】,禁止进入通道【$d】", equipment.Sn, umbrellaSn, channelNum)
 		return utilities.RspStatusUmbrellaExpired
 	}
 	if m.Status == UmbrellaStatusIn {
@@ -101,7 +101,7 @@ func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelN
 func (m *Umbrella) OutEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8) uint8 {
 	m.Query().First(m, "sn = ?", strings.ToUpper(umbrellaSn))
 	if m.ID == 0 {
-		utilities.SysLog.Warningf("非法伞编号【%s】,禁止出通道", umbrellaSn)
+		utilities.SysLog.Warningf("设备【%s】非法伞编号【%s】,禁止出通道【%d】", equipment.Sn, umbrellaSn, channelNum)
 		return utilities.RspStatusUmbrellaIllegal
 	}
 	m.Entity = m

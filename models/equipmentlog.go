@@ -9,11 +9,7 @@ import (
 type EquipmentLog struct {
 	gorm.Model
 	Base
-	EquipmentId uint
-	SiteId uint
-	ApiName string
-	Code string
-	Type string
+	Level int
 	Content string
 }
 
@@ -38,4 +34,10 @@ func (m *EquipmentLog) BeforeDelete() (err error) {
 
 func (m *EquipmentLog) Query() *gorm.DB{
 	return utilities.MyDB.Model(m)
+}
+
+func (m *EquipmentLog) NewLog(level int, content string) bool {
+	log := EquipmentLog{ Level: level, Content: content}
+	go utilities.MyDB.Create(&log)
+	return true
 }

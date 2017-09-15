@@ -113,7 +113,7 @@ func (m *CustomerHire) FreezeDepositFee(umbrella *Umbrella){
 		//utilities.SysLog.Infof("用户【%d】的账户id信息【%d】", m.CustomerId, account.ID)
 		if account.ID > 0 {
 			res := account.FreezingDeposit(price.DepositCash)
-			utilities.SysLog.Infof("用户【%d】的冻结账户【%d】资金【%f】", m.CustomerId, account.ID, price.DepositCash)
+			utilities.SysLog.Noticef("用户【%d】的冻结账户【%d】资金【%f】", m.CustomerId, account.ID, price.DepositCash)
 			if res {
 				pay := &CustomerPayment{}
 				pay.PayDeposit(m.ID, m.CustomerId, account.ID, price.DepositCash)

@@ -44,15 +44,15 @@ const (
 	CMD_CONNECT uint8 = 0x02
     CMD_CONNECT_RESP uint8 = 0x82
 	CMD_CHANNEL_INSPECT uint8 = 0x41
-	CMD_CHANNEL_INSPECT_RESP uint8 = 0xB1
+	CMD_CHANNEL_INSPECT_RESP uint8 = 0xC1
 	CMD_CHANNEL_TAKE_UMBRELLA uint8 = 0x42
-	CMD_CHANNEL_TAKE_UMBRELLA_RESP uint8 = 0xB2
+	CMD_CHANNEL_TAKE_UMBRELLA_RESP uint8 = 0xC2
 	CMD_CHANNEL_UMBRELLA_OUT uint8 = 0x43
-	CMD_CHANNEL_UMBRELLA_OUT_RESP uint8 = 0xB3
+	CMD_CHANNEL_UMBRELLA_OUT_RESP uint8 = 0xC3
 	CMD_CHANNEL_UMBRELLA_IN uint8 = 0x44
-	CMD_CHANNEL_UMBRELLA_IN_RESP uint8 = 0xB4
+	CMD_CHANNEL_UMBRELLA_IN_RESP uint8 = 0xC4
 	CMD_UMBRELLA_INSPECT uint8 = 0x45
-	CMD_UMBRELLA_INSPECT_RESP uint8 = 0xB5
+	CMD_UMBRELLA_INSPECT_RESP uint8 = 0xC5
 )
 
 type Conn struct {
@@ -121,16 +121,16 @@ func NewConn(svr *TcpServer, conn net.Conn, typ Type) *Conn {
 func (c *Conn) Serve() {
 	defer func() {
 		if err := recover(); err != nil {
-			utilities.SysLog.Panicf("客户端会话严重错误 %v: %v", c.rw.RemoteAddr(), err)
+			c.Panicf("客户端会话严重错误 %v: %v", c.rw.RemoteAddr(), err)
 		}
 	}()
 	defer c.Close()
 
-	utilities.SysLog.Infof("开启客户端【%v】会话, 等待接收命令 ", c.rw.RemoteAddr())
+	c.Noticef("开启客户端【%v】会话, 等待接收命令 ", c.rw.RemoteAddr())
 	for {
 		select {
 		case <-c.exceed:
-			utilities.SysLog.Warningf("关闭客户端【%v】会话 ", c.rw.RemoteAddr())
+			c.Warningf("关闭客户端【%v】会话 ", c.rw.RemoteAddr())
 			return // close the connection.
 		default:
 		}
@@ -138,15 +138,15 @@ func (c *Conn) Serve() {
 		rs, err := c.readPacket()
 		if err != nil {
 			if e, ok := err.(net.Error); ok && e.Timeout() {
-				utilities.SysLog.Debugf("读取命令超时：%v ", err)
+				c.Debugf("读取命令超时：%v ", err)
 				continue
 			}
-			utilities.SysLog.Errorf("读取命令错误：%v ", err)
+			c.Errorf("读取命令错误：%v ", err)
 			break
 			//continue
 		}
 
-		utilities.SysLog.Infof("客户端【%v】,有【%d】条命令待处理", c.rw.RemoteAddr(), len(rs))
+		c.Infof("客户端【%v】,有【%d】条命令待处理", c.rw.RemoteAddr(), len(rs))
 		for _, r := range rs {
 			_, err = c.server.Handler.ServeHandle(r, r.Packet, c.server.ErrorLog)
 			if err1 := c.finishPacket(r); err1 != nil {
@@ -291,14 +291,14 @@ func (c *Conn) finishPacket(r *Response) error {
 		// start a goroutine for sending active test.
 		c.startActiveTest()
 	}
-	utilities.SysLog.Infof("预备向客户端【%v】发送响应命令", c.rw.RemoteAddr())
+	c.Infof("预备向客户端【%v】发送响应命令", c.rw.RemoteAddr())
 	return c.SendPkt(r.Packer, r.SeqId)
 }
 
 func (c *Conn) startActiveTest(){
 	exceed := make(chan struct{})
 	c.exceed = exceed
-	utilities.SysLog.Infof("预备向客户端【%v】发送维持包数据 ", c.rw.RemoteAddr())
+	c.Infof("预备向客户端【%v】发送维持包数据 ", c.rw.RemoteAddr())
 	go func() {
 		t := time.NewTicker(c.t)
 		defer t.Stop()
@@ -310,7 +310,7 @@ func (c *Conn) startActiveTest(){
 			case <- t.C:
 				// check whether c.counter exceeds
 				if atomic.LoadInt32(&c.counter) >= c.n {
-					utilities.SysLog.Infof("没接收到客户端【%v】的维持包反馈【%d】次!",
+					c.Infof("没接收到客户端【%v】的维持包反馈【%d】次!",
 						c.rw.RemoteAddr(), c.n)
 					exceed <- struct{}{}
 					break
@@ -318,9 +318,9 @@ func (c *Conn) startActiveTest(){
 				// send a active test packet to peer, increase the active test counter
 				p := &CmdActiveTestReqPkt{}
 				err := c.SendPkt(p, 0)
-				utilities.SysLog.Infof("向客户端【%v】发送维持包数据 ", c.rw.RemoteAddr())
+				c.Infof("向客户端【%v】发送维持包数据 ", c.rw.RemoteAddr())
 				if err != nil {
-					utilities.SysLog.Infof("向客户端【%v】发送维持包数据错误【$s】", c.rw.RemoteAddr(), err)
+					c.Infof("向客户端【%v】发送维持包数据错误【$s】", c.rw.RemoteAddr(), err)
 				} else {
 					atomic.AddInt32(&c.counter, 1)
 				}
@@ -334,12 +334,13 @@ func (c *Conn) Close() {
 		if c.State == CONN_CLOSED {
 			return
 		}
-		utilities.SysLog.Warningf("关闭客户端【%v】连接!", c.rw.RemoteAddr())
+		c.Warningf("关闭客户端【%v】连接!", c.rw.RemoteAddr())
 		if c.Equipment != nil {
 			c.Equipment.Offline()
 		}
 		close(c.done)  // let the SeqId goroutine exit.
 		c.rw.Close() // close the underlying net.Conn
+		close(c.exceed)
 		c.State = CONN_CLOSED
 	}
 }
@@ -352,20 +353,17 @@ func (c *Conn) SetEquipment(equipment *models.Equipment){
 	c.Equipment = equipment
 	go func(){
 		time.Sleep(1*time.Second)
-		c.ChannelInspect()
+		c.ChannelInspect(1)
 	}()
 }
 
-func (c *Conn) ChannelInspect(){
-	for _, channel := range c.Equipment.ChannelCache{
-		time.Sleep(1*time.Second)
+func (c *Conn) ChannelInspect(channel uint8){
 		req := &CmdChannelInspectReqPkt{
-			CmdData: CmdData{ Channel: channel.Id, },
+			CmdData: CmdData{ Channel: channel, },
 		}
 		seqId := <- c.SeqId
-		utilities.SysLog.Infof("发送通道检测命令设备【%s】通道【%d】序号【%d】", c.Equipment.Sn, channel.Id, seqId)
+		c.Infof("发送通道检测命令设备【%s】通道【%d】序号【%d】", c.Equipment.Sn, channel, seqId)
 		c.SendPkt(req, seqId)
-	}
 }
 
 // SendPkt pack the CMD packet structure and send it to the other peer.
@@ -383,7 +381,7 @@ func (c *Conn) SendPkt(packet Packer, seqId uint8) error {
 	buf = append(buf, CMDFOOT)
 
 	_, err = c.rw.Write(buf) //block write
-	utilities.SysLog.Infof("发送命令【%s】长度【%d】序列号【%d】命令ID【%X】通道【%d】数据【%x】", CmdDesc(data[2]), data[0], data[1], data[2], data[3], data[4:])
+	c.Noticef("发送命令【%s】长度【%d】序列号【%d】命令ID【%X】通道【%d】数据【%X】--【%X】", CmdDesc(data[2]), data[0], data[1], data[2], data[3], data[4:], buf[:])
 	buf = nil
 	if err != nil {
 		return err
@@ -408,22 +406,22 @@ func (c *Conn) RecvAndUnpackPkt(timeout time.Duration) ([]Packer, error) {
 	if err != nil {
 		return nil, err
 	}
-	utilities.SysLog.Infof("读取到的数据【%x】长度【%d】", leftData[:length], length)
+	c.Infof("读取到的数据【%x】长度【%d】", leftData[:length], length)
 
 	cmds := c.ParsePkt(length, leftData)
 	num := len(cmds)
-	utilities.SysLog.Infof("解析出【%d】条命令 .", num)
+	c.Infof("解析出【%d】条命令 .", num)
 	var packers []Packer
 	if  num > 0 {
 		for _, cmd := range cmds {
-			//utilities.SysLog.Infof("解析命令详情数据【%x】.", cmd)
-			utilities.SysLog.Infof("接收到的命令详情：【%s】长度【%d】序列号【%d】命令ID【%X】通道【%d】数据【%x】", CmdDesc(cmd[2]), cmd[0], cmd[1], cmd[2], cmd[3], cmd[4:])
+			//c.Infof("解析命令详情数据【%x】.", cmd)
+			c.Noticef("接收命令详情：【%s】长度【%d】序列号【%d】命令ID【%X】通道【%d】数据【%x】", CmdDesc(cmd[2]), cmd[0], cmd[1], cmd[2], cmd[3], cmd[4:])
 			cd := &CmdData{}
 			p, err := cd.ParseCmdData(cmd)
 			if err == nil {
 				packers = append(packers, p)
 			}else{
-				utilities.SysLog.Infof("解析命令详情数据【%x】错误： %v .", cmd, err)
+				c.Warningf("解析命令详情数据【%x】错误： %v .", cmd, err)
 			}
 		}
 	}
@@ -458,6 +456,47 @@ func (c *Conn) ParsePkt(len int, data []byte) [][]byte {
 		i ++
 	}
 	return result
+}
+
+//log
+func (c *Conn) Debugf(format string, args... interface{}){
+	msg := c.logMsg(format, args...)
+	utilities.SysLog.Debug(msg)
+}
+
+func (c *Conn) Infof(format string, args... interface{}){
+	msg := c.logMsg(format, args...)
+	utilities.SysLog.Info(msg)
+}
+
+func (c *Conn) Noticef(format string, args... interface{}){
+	msg := c.logMsg(format, args...)
+	utilities.SysLog.Noticef(msg)
+}
+
+func (c *Conn) Errorf(format string, args... interface{}){
+	msg := c.logMsg(format, args...)
+	utilities.SysLog.Error(msg)
+}
+
+func (c *Conn) Warningf(format string, args... interface{}){
+	msg := c.logMsg(format, args...)
+	utilities.SysLog.Warning(msg)
+}
+
+func (c *Conn) Panicf(format string, args... interface{}){
+	msg := c.logMsg(format, args...)
+	utilities.SysLog.Panicf(msg)
+}
+
+func (c *Conn) logMsg(format string, args... interface{}) string{
+	msg := ""
+	if c.Equipment != nil{
+		msg = fmt.Sprintf("设备【%s】", c.Equipment.Sn) + fmt.Sprintf(format, args...)
+	}else{
+		msg = fmt.Sprintf(format, args...)
+	}
+	return msg
 }
 
 func CmdDesc(cmdId uint8) string {

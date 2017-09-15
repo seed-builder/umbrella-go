@@ -133,7 +133,7 @@ func (es *EquipmentService) HandleConnect(r *network.Response, p *network.Packet
 		// go on to next handler
 		return true, nil
 	}
-	utilities.SysLog.Infof("收到设备登陆命令, 设备【%s】 序列号【%d】", req.EquipmentSn, req.SeqId)
+	utilities.SysLog.Noticef("收到设备【%s】登陆命令, 序列号【%d】", req.EquipmentSn, req.SeqId)
 	resp := r.Packer.(*network.CmdConnectRspPkt)
 	resp.Status = utilities.RspStatusUserWrong
 	if req.EquipmentSn != "" {
@@ -146,10 +146,10 @@ func (es *EquipmentService) HandleConnect(r *network.Response, p *network.Packet
 			r.Packet.Conn.SetEquipment(eq)
 			es.RegisterConn(req.EquipmentSn, r.Packet.Conn)
 			resp.Status = utilities.RspStatusSuccess
-			utilities.SysLog.Infof("设备登陆成功, 设备【%s】 序列号【%d】", req.EquipmentSn, req.SeqId)
+			utilities.SysLog.Noticef("设备【%s】登陆成功, 序列号【%d】", req.EquipmentSn, req.SeqId)
 		}else{
 			resp.Status = utilities.RspStatusEquipmentSnIllegal
-			utilities.SysLog.Warningf("设备登陆失败, 设备【%s】 序列号【%d】", req.EquipmentSn, req.SeqId)
+			utilities.SysLog.Warningf("设备【%s】登陆失败, 序列号【%d】", req.EquipmentSn, req.SeqId)
 		}
 	}
 	return true, nil
@@ -161,7 +161,7 @@ func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Pac
 	if !ok {
 		return true, nil
 	}
-	utilities.SysLog.Infof("收到还伞命令, 设备【%s】,通道【%d】,伞编号【%X】, 序列号【%d】", r.Equipment.Sn,
+	utilities.SysLog.Noticef("收到设备【%s】还伞命令,通道【%d】,伞编号【%X】, 序列号【%d】", r.Equipment.Sn,
 		req.Channel, req.UmbrellaSn, req.SeqId)
 	resp := r.Packer.(*network.CmdUmbrellaInRspPkt)
 
@@ -176,7 +176,7 @@ func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Pac
 func (es *EquipmentService) HandleTakeUmbrellaRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error) {
 	rsp, ok := p.Packer.(*network.CmdTakeUmbrellaRspPkt)
 	if ok {
-		utilities.SysLog.Infof("收到设备取伞反馈，设备【%s】,伞编号【%X】,状态【%s】,序列号【%d】",r.Equipment.Sn, rsp.UmbrellaSn, utilities.RspStatusDesc(rsp.Status), rsp.SeqId)
+		utilities.SysLog.Noticef("收到设备【%s】设备取伞反馈,伞编号【%X】,状态【%s】,序列号【%d】",r.Equipment.Sn, rsp.UmbrellaSn, utilities.RspStatusDesc(rsp.Status), rsp.SeqId)
 		if rsp.Status == utilities.RspStatusSuccess{
 			umbrella := &models.Umbrella{}
 			sn := fmt.Sprintf("%X", rsp.UmbrellaSn)
@@ -199,14 +199,14 @@ func (es *EquipmentService) HandleUmbrellaOutRsp(r *network.Response, p *network
 	if ok {
 		c, o := es.Requests[rsp.SeqId]
 		if o {
-			utilities.SysLog.Infof("收到设备出伞反馈，设备【%s】,伞编号【%X】,状态【%s】,序列号【%d】",r.Equipment.Sn, rsp.UmbrellaSn, utilities.RspStatusDesc(rsp.Status), rsp.SeqId)
+			utilities.SysLog.Noticef("收到设备【%s】出伞反馈,伞编号【%X】,状态【%s】,序列号【%d】",r.Equipment.Sn, rsp.UmbrellaSn, utilities.RspStatusDesc(rsp.Status), rsp.SeqId)
 			if rsp.Status == utilities.RspStatusSuccess {
 				c <- fmt.Sprintf("%X", rsp.UmbrellaSn)
 			}else{
 				close(c)
 			}
 			delete( es.Requests, rsp.SeqId )
-			utilities.SysLog.Infof("删除等待序列，伞编号【%X】， 序列号【%d】", rsp.UmbrellaSn, rsp.SeqId)
+			utilities.SysLog.Infof("删除等待序列，设备【%s】, 伞编号【%X】， 序列号【%d】", r.Equipment.Sn, rsp.UmbrellaSn, rsp.SeqId)
 		}
 	}
 	return true, nil
@@ -216,8 +216,12 @@ func (es *EquipmentService) HandleUmbrellaOutRsp(r *network.Response, p *network
 func (es *EquipmentService) HandleChannelInspectRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
 	rsp, ok := p.Packer.(*network.CmdChannelInspectRspPkt)
 	if ok {
-		utilities.SysLog.Infof("收到设备通道检查反馈，设备【%s】,通道【%d】,状态【%s】,序列号【%d】",r.Equipment.Sn, rsp.Channel, utilities.RspStatusDesc(rsp.Status), rsp.SeqId)
+		utilities.SysLog.Noticef("收到设备【%s】通道检查反馈, 通道【%d】,状态【%s】,序列号【%d】",r.Equipment.Sn, rsp.Channel, utilities.RspStatusDesc(rsp.Status), rsp.SeqId)
 		p.Conn.Equipment.SetChannelStatus(rsp.Channel, rsp.Status)
+		if rsp.Channel < p.Conn.Equipment.Channels {
+			nextId := rsp.Channel + 1
+			p.Conn.ChannelInspect(nextId)
+		}
 	}
 	return true, nil
 }
@@ -227,7 +231,7 @@ func (es *EquipmentService) HandleUmbrellaInspect(r *network.Response, p *networ
 	req, ok := p.Packer.(*network.CmdUmbrellaInspectReqPkt)
 	if ok {
 		resp := r.Packer.(*network.CmdUmbrellaInspectRspPkt)
-		utilities.SysLog.Infof("收到伞SN检查命令, 设备【%s】,通道【%d】,伞编号【%X】, 序列号【%d】", r.Equipment.Sn,
+		utilities.SysLog.Noticef("收到设备【%s】伞SN检查命令, 通道【%d】,伞编号【%X】, 序列号【%d】", r.Equipment.Sn,
 			req.Channel, req.UmbrellaSn, req.SeqId)
 
 		umbrella := &models.Umbrella{}
@@ -249,6 +253,12 @@ func init()  {
 		EquipmentConns: make(map[string]*network.Conn),
 		Requests: make(map[uint8]chan string),
 	}
+
+
+
+
+
+
 }
 
 

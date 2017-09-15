@@ -110,10 +110,12 @@ func (m *Equipment) Offline(){
 }
 
 func (m *Equipment)SetChannelStatus(num uint8, status uint8){
-	n := m.ChannelCache[num]
-	n.Status = status
-	if status == utilities.RspStatusChannelTimeout {
-		n.Timeouts ++
+	n, ok := m.ChannelCache[num]
+	if ok {
+		n.Status = status
+		if status == utilities.RspStatusChannelTimeout {
+			n.Timeouts ++
+		}
 	}
 }
 

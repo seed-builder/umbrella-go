@@ -28,6 +28,8 @@ const (
 	RspStatusUmbrellaReturned uint8 = 0x0B
 	//数据错
 	RspStatusDataErr uint8 = 0x0C
+	//通道和命令不匹配
+	RspStatusNotMatch uint8 = 0x0D
 
 	//通道超时
 	RspStatusChannelTimeout uint8 = 0xA0
@@ -39,6 +41,8 @@ const (
 	RspStatusChannelReturn uint8 = 0xA3
 	//通道命令不支持
 	RspStatusChannelErr uint8 = 0xA4
+	//伞SN不匹配
+	RspStatusChannelErrSN uint8 = 0xA5
 
 
 )
@@ -82,6 +86,10 @@ func RspStatusDesc(status uint8) string{
 		desc = "通道锁状态-还伞"
 	case RspStatusChannelErr:
 		desc = "通道命令不支持"
+	case RspStatusNotMatch:
+		desc = "通道和命令不匹配"
+	case RspStatusChannelErrSN:
+		desc = "通道伞SN不匹配"
 
 	}
 	return desc

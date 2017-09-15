@@ -13,7 +13,7 @@ import (
 )
 
 func restApi()  {
-	utilities.SysLog.Info("REST api 服务启动, 端口：", utilities.SysConfig.HttpPort)
+	utilities.SysLog.Notice("REST api 服务启动, 端口：", utilities.SysConfig.HttpPort)
 	r := gin.Default()
 	r.Use(utilities.Cores())
 	// This handler will match /user/john but will not match neither /user/ or /user
@@ -39,7 +39,7 @@ func equipmentSrv(){
 
 	addr := utilities.SysConfig.TcpIp + ":" + utilities.SysConfig.TcpPort
 	duration := time.Duration(utilities.SysConfig.TcpTestTimeout)* time.Second
-	utilities.SysLog.Info("设备监听服务启动, 地址： ", addr)
+	utilities.SysLog.Noticef("设备监听服务启动, 地址：%s ", addr)
 	err := umbrella.EquipmentSrv.ListenAndServe(
 			addr,
 			network.V10,
@@ -48,12 +48,12 @@ func equipmentSrv(){
 			nil,
 		)
 	if err != nil {
-		utilities.SysLog.Info("设备监听服务启动失败：", err)
+		utilities.SysLog.Panicf("设备监听服务启动失败：%v", err)
 	}
 }
 
 func main() {
-	utilities.SysLog.Info("服务开始启动....")
+	utilities.SysLog.Notice("服务开始启动....")
 	go restApi()
 	go equipmentSrv()
 
@@ -64,7 +64,7 @@ func main() {
 		if arr := strings.Fields(line); len(arr) > 0 {
 			switch arr[0] {
 			case "exit":
-				utilities.SysLog.Info("系统退出")
+				utilities.SysLog.Notice("系统退出")
 				umbrella.EquipmentSrv.Close()
 				os.Exit(0)
 			case "open":
@@ -76,6 +76,6 @@ func main() {
 		utilities.SysLog.Info("请输入命令...")
 	}
 	if err := scanner.Err(); err != nil {
-		utilities.SysLog.Error("命令错误:", err)
+		utilities.SysLog.Error("命令错误: ", err)
 	}
 }
