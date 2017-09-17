@@ -115,6 +115,8 @@ func (m *Equipment)SetChannelStatus(num uint8, status uint8){
 		n.Status = status
 		if status == utilities.RspStatusChannelTimeout {
 			n.Timeouts ++
+			msg := &Message{}
+			msg.AddChannelTimeout(m.Sn, m.ID, m.SiteId, uint(num))
 		}
 	}
 }

@@ -177,7 +177,7 @@ func (es *EquipmentService) HandleTakeUmbrellaRsp(r *network.Response, p *networ
 	rsp, ok := p.Packer.(*network.CmdTakeUmbrellaRspPkt)
 	if ok {
 		utilities.SysLog.Noticef("收到设备【%s】设备取伞反馈,伞编号【%X】,状态【%s】,序列号【%d】",r.Equipment.Sn, rsp.UmbrellaSn, utilities.RspStatusDesc(rsp.Status), rsp.SeqId)
-		if rsp.Status == utilities.RspStatusSuccess{
+		if rsp.Status == utilities.RspStatusSuccess {
 			umbrella := &models.Umbrella{}
 			sn := fmt.Sprintf("%X", rsp.UmbrellaSn)
 			status := umbrella.Check(sn)

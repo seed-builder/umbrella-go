@@ -342,6 +342,8 @@ func (c *Conn) Close() {
 		c.rw.Close() // close the underlying net.Conn
 		close(c.exceed)
 		c.State = CONN_CLOSED
+		msg := &models.Message{}
+		msg.AddEquipmentError(c.Equipment.Sn, c.Equipment.ID, c.Equipment.SiteId, "设备异常下线")
 	}
 }
 
@@ -355,6 +357,10 @@ func (c *Conn) SetEquipment(equipment *models.Equipment){
 		time.Sleep(1*time.Second)
 		c.ChannelInspect(1)
 	}()
+}
+
+func (c *Conn) SetChannelStatus(num uint8, status uint8){
+	c.Equipment.SetChannelStatus(num, status)
 }
 
 func (c *Conn) ChannelInspect(channel uint8){
