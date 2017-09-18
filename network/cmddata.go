@@ -72,6 +72,8 @@ func (cmd CmdData) ParseCmdData(buf []byte) (Packer, error) {
 	cmd.Channel = uint8(buf[3])
 	cmd.Sign = crc
 	cmd.Body = buf[4:length - 1]
+	//初始化状态为：成功
+	cmd.DataStatus = utilities.RspStatusSuccess
 
 	utilities.SysLog.Infof("命令【%x】总长度【%d】,编号【%x】【%s】, 序列号【%d】 ", buf, length, cmd.CmdId, CmdDesc(cmd.CmdId), cmd.SeqId)
 	// The left packet data (start from seqId in header).
@@ -135,6 +137,15 @@ func (cmd CmdData) ParseCmdData(buf []byte) (Packer, error) {
 		p = &CmdUmbrellaInspectRspPkt{
 			CmdData: cmd,
 		}
+	case CMD_CHANNEL_RESCUE:
+		p = &CmdChannelRescueReqPkt{
+			CmdData: cmd,
+		}
+	case CMD_CHANNEL_RESCUE_RESP:
+		p = &CmdChannelRescueRspPkt{
+			CmdData: cmd,
+		}
+
 	default:
 		p = nil
 		canUnpack = false
@@ -148,7 +159,7 @@ func (cmd CmdData) ParseCmdData(buf []byte) (Packer, error) {
 			utilities.SysLog.Warningf(" 解析命令详情数据错误： %v ", err)
 			cmd.DataStatus = utilities.RspStatusDataErr
 			cmd.Err = err
-			return nil, cmd.Err
+			//return nil, cmd.Err
 		}
 	}
 	return p, nil

@@ -51,11 +51,14 @@ func (p *CmdUmbrellaOutRspPkt) Pack(seqId uint8) ([]byte, error) {
 // After unpack, you will get all value of fields in
 // CmdActiveTestReqPkt struct.
 func (p *CmdUmbrellaOutRspPkt) Unpack(data []byte) error {
-	if l := len(data); l == 5 {
+	l := len(data)
+	if l == 5 {
 		p.UmbrellaSn = data[:4]
 		p.Status = data[4]
-		return nil
+	}else if l == 1{
+		p.Status = data[0]
 	}else{
 		return ErrCmdDataLengthWrong
 	}
+	return nil
 }

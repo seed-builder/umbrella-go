@@ -7,6 +7,8 @@ type Channel struct {
 	Status uint8
 	//有伞数
 	Umbrellas uint8
-	//超时次数
-	Timeouts uint8
+	//是否有效
+	Valid bool
+	//发送救援命令次数， 超出3次则记录异常
+	RescueTimes int
 }

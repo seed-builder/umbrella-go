@@ -43,6 +43,8 @@ const (
 	RspStatusChannelErr uint8 = 0xA4
 	//伞SN不匹配
 	RspStatusChannelErrSN uint8 = 0xA5
+	//通道锁异常
+	RspStatusChannelErrLock uint8 = 0xA6
 
 
 )
@@ -90,7 +92,8 @@ func RspStatusDesc(status uint8) string{
 		desc = "通道和命令不匹配"
 	case RspStatusChannelErrSN:
 		desc = "通道伞SN不匹配"
-
+	case RspStatusChannelErrLock:
+		desc = "通道锁异常"
 	}
 	return desc
 }

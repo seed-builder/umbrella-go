@@ -71,7 +71,7 @@ func (m *Equipment) ChooseChannel() uint8 {
 	var len uint8
 	channelNum := uint8(1)
 	for n, l :=  range m.ChannelCache {
-		if n != m.UsedChannelNum && l.Status != utilities.RspStatusChannelTimeout &&l.Umbrellas > len {
+		if n != m.UsedChannelNum && l.Valid &&l.Umbrellas > len {
 			channelNum = n
 			len = l.Umbrellas
 		}
@@ -109,15 +109,30 @@ func (m *Equipment) Offline(){
 	utilities.MyDB.Model(m).Update("status", m.Status)
 }
 
-func (m *Equipment)SetChannelStatus(num uint8, status uint8){
+func (m *Equipment)SetChannelStatus(num uint8, status uint8) bool {
 	n, ok := m.ChannelCache[num]
 	if ok {
+		rescue := false
 		n.Status = status
 		if status == utilities.RspStatusChannelTimeout {
-			n.Timeouts ++
+			n.Valid = false
 			msg := &Message{}
-			msg.AddChannelTimeout(m.Sn, m.ID, m.SiteId, uint(num))
+			msg.AddChannelError(m.Sn, m.ID, m.SiteId, uint(num))
+		} else if status == utilities.RspStatusChannelErrLock {
+			rescue = true
+			n.Valid = false
+			n.RescueTimes ++
+			if n.RescueTimes > 3 {
+				msg := &Message{}
+				msg.AddChannelError(m.Sn, m.ID, m.SiteId, uint(num))
+				rescue = false
+			}
+		} else {
+			n.Valid = true
+			n.RescueTimes = 0
 		}
+		return rescue
 	}
+	return false
 }
 

@@ -53,6 +53,8 @@ const (
 	CMD_CHANNEL_UMBRELLA_IN_RESP uint8 = 0xC4
 	CMD_UMBRELLA_INSPECT uint8 = 0x45
 	CMD_UMBRELLA_INSPECT_RESP uint8 = 0xC5
+	CMD_CHANNEL_RESCUE uint8 = 0x46
+	CMD_CHANNEL_RESCUE_RESP uint8 = 0xC6
 )
 
 type Conn struct {
@@ -75,6 +77,7 @@ type Conn struct {
 
 	Equipment *models.Equipment
 	Ip string
+	SendCmdCache map[uint8]Cmd
 }
 
 func newSeqIdGenerator() (<-chan uint8, chan struct{}) {
@@ -111,6 +114,7 @@ func NewConn(svr *TcpServer, conn net.Conn, typ Type) *Conn {
 		SeqId: seqId,
 		done:  done,
 		Ip: conn.RemoteAddr().String(),
+		SendCmdCache: make(map[uint8]Cmd),
 	}
 	tc := c.rw.(*net.TCPConn) // Always tcpconn
 	tc.SetKeepAlive(true) //Keepalive as default
@@ -125,7 +129,8 @@ func (c *Conn) Serve() {
 		}
 	}()
 	defer c.Close()
-
+	//开启维持包
+	c.startActiveTest()
 	c.Noticef("开启客户端【%v】会话, 等待接收命令 ", c.rw.RemoteAddr())
 	for {
 		select {
@@ -142,8 +147,8 @@ func (c *Conn) Serve() {
 				continue
 			}
 			c.Errorf("读取命令错误：%v ", err)
-			break
-			//continue
+			//break
+			continue
 		}
 
 		c.Infof("客户端【%v】,有【%d】条命令待处理", c.rw.RemoteAddr(), len(rs))
@@ -192,8 +197,10 @@ func (c *Conn) parseResponse(i Packer) (*Response, error)  {
 				CmdData: CmdData{
 					SeqId: p.SeqId,
 				},
+				Status: p.DataStatus,
 			},
 			SeqId: p.SeqId,
+			Status: p.DataStatus,
 		}
 	case *CmdUmbrellaInReqPkt:
 		pkt = &Packet{
@@ -208,9 +215,10 @@ func (c *Conn) parseResponse(i Packer) (*Response, error)  {
 					Channel: p.Channel,
 				},
 				UmbrellaSn: p.UmbrellaSn,
-				Status: utilities.RspStatusSuccess,
+				Status: p.DataStatus,
 			},
 			SeqId: p.SeqId,
+			Status: p.DataStatus,
 		}
 	case *CmdActiveTestReqPkt:
 		pkt = &Packet{
@@ -241,9 +249,10 @@ func (c *Conn) parseResponse(i Packer) (*Response, error)  {
 					Channel: p.Channel,
 				},
 				UmbrellaSn: p.UmbrellaSn,
-				Status: utilities.RspStatusSuccess,
+				Status: p.DataStatus,
 			},
 			SeqId: p.SeqId,
+			Status: p.DataStatus,
 		}
 	case *CmdTakeUmbrellaRspPkt:
 		pkt = &Packet{
@@ -261,7 +270,7 @@ func (c *Conn) parseResponse(i Packer) (*Response, error)  {
 			},
 			SeqId: p.SeqId,
 		}
-	case *CmdChannelInspectRspPkt,*CmdUmbrellaOutRspPkt,*CmdActiveTestRspPkt:
+	case *CmdChannelInspectRspPkt,*CmdUmbrellaOutRspPkt,*CmdActiveTestRspPkt,*CmdChannelRescueRspPkt:
 		pkt = &Packet{
 			Packer: p,
 			Conn:   c,
@@ -287,10 +296,10 @@ func (c *Conn) finishPacket(r *Response) error {
 		// to send anything back.
 		return nil
 	}
-	if rsp, ok := r.Packer.(*CmdConnectRspPkt); ok && rsp.Status == utilities.RspStatusSuccess{
-		// start a goroutine for sending active test.
-		c.startActiveTest()
-	}
+	//if rsp, ok := r.Packer.(*CmdConnectRspPkt); ok && rsp.Status == utilities.RspStatusSuccess{
+	//	// start a goroutine for sending active test.
+	//	c.startActiveTest()
+	//}
 	c.Infof("预备向客户端【%v】发送响应命令", c.rw.RemoteAddr())
 	return c.SendPkt(r.Packer, r.SeqId)
 }
@@ -343,7 +352,7 @@ func (c *Conn) Close() {
 		close(c.exceed)
 		c.State = CONN_CLOSED
 		msg := &models.Message{}
-		msg.AddEquipmentError(c.Equipment.Sn, c.Equipment.ID, c.Equipment.SiteId, "设备异常下线")
+		msg.AddEquipmentError(c.Equipment.Sn, c.Equipment.ID, c.Equipment.SiteId, "设备下线")
 	}
 }
 
@@ -389,6 +398,15 @@ func (c *Conn) SendPkt(packet Packer, seqId uint8) error {
 	_, err = c.rw.Write(buf) //block write
 	c.Noticef("发送命令【%s】长度【%d】序列号【%d】命令ID【%X】通道【%d】数据【%X】--【%X】", CmdDesc(data[2]), data[0], data[1], data[2], data[3], data[4:], buf[:])
 	buf = nil
+	//不存在， 则缓存发送过的命令
+	_, ok := c.SendCmdCache[seqId]
+	if seqId > 0 && !ok {
+		c.SendCmdCache[seqId] = Cmd{
+			packer: packet,
+			sended: time.Now(),
+		}
+	}
+
 	if err != nil {
 		return err
 	}
@@ -529,13 +547,18 @@ func CmdDesc(cmdId uint8) string {
 	case CMD_ACTIVE_TEST_RESP:
 		desc = "维持包响应"
 	case CMD_CHANNEL_INSPECT:
-		desc = "通道检查"
+		desc = "通道检查请求"
 	case CMD_CHANNEL_INSPECT_RESP:
 		desc = "通道检查响应"
 	case CMD_UMBRELLA_INSPECT:
-		desc = "伞SN检查"
+		desc = "伞SN检查请求"
 	case CMD_UMBRELLA_INSPECT_RESP:
 		desc = "伞SN检查响应"
+	case CMD_CHANNEL_RESCUE_RESP:
+		desc = "通道救援恢复响应"
+	case CMD_CHANNEL_RESCUE:
+		desc = "通道救援恢复请求"
+
 	}
 	return desc
 }

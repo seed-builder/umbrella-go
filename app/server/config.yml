@@ -3,7 +3,7 @@ tcp_ip: 127.0.0.1
 tcp_port: 7777
 tcp_test_timeout: 15
 tcp_test_max: 3
-tcp_resend_interval: 1
+tcp_resend_interval: 15
 debug: true
 db_dialect: mysql
 db_server: 127.0.0.1:3306

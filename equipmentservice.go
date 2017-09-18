@@ -29,12 +29,15 @@ func (es *EquipmentService) ListenAndServe(addr string, ver  network.Type, t tim
 	//	return network.ErrNoHandlers
 	//}
 	handlers := []network.Handler{
+		network.HandlerFunc(es.HandleDataErr),
 		network.HandlerFunc(es.HandleConnect),
 		network.HandlerFunc(es.HandleUmbrellaIn),
 		network.HandlerFunc(es.HandleUmbrellaOutRsp),
 		network.HandlerFunc(es.HandleChannelInspectRsp),
+		network.HandlerFunc(es.HandleChannelRescueRsp),
 		network.HandlerFunc(es.HandleTakeUmbrellaRsp),
 		network.HandlerFunc(es.HandleUmbrellaInspect),
+		network.HandlerFunc(es.ClearCmdCache),
 	}
 
 	var handler network.Handler
@@ -97,6 +100,7 @@ func (es *EquipmentService) OpenChannel(equipmentSn string, channelNum uint8) (u
 				if ok {
 					utilities.SysLog.Warningf("设备【%s】开启通道【%d】取伞命令超时 序列号【%d】!", equipmentSn, channelNum, seqId)
 					close(c)
+					delete( es.Requests, seqId )
 				}
 			}()
 
@@ -123,6 +127,13 @@ func (es *EquipmentService) Close(){
 		conn.Close()
 		utilities.SysLog.Noticef("正常关闭设备【%s】连接", sn)
 	}
+}
+
+func (es *EquipmentService) HandleDataErr(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
+	if r.Packer != nil && r.Status == utilities.RspStatusDataErr {
+		return false, nil
+	}
+	return true, nil
 }
 
 //HandleConnect 设备登陆服务器
@@ -186,8 +197,11 @@ func (es *EquipmentService) HandleTakeUmbrellaRsp(r *network.Response, p *networ
 				c, ok := es.Requests[rsp.SeqId]
 				if ok {
 					close(c)
+					delete( es.Requests, rsp.SeqId )
 				}
 			}
+		}else{
+			return es.HandleException(r, p, r.SeqId, rsp.Status, rsp.Channel)
 		}
 	}
 	return true, nil
@@ -204,6 +218,7 @@ func (es *EquipmentService) HandleUmbrellaOutRsp(r *network.Response, p *network
 				c <- fmt.Sprintf("%X", rsp.UmbrellaSn)
 			}else{
 				close(c)
+				es.HandleException(r, p, r.SeqId, rsp.Status, rsp.Channel)
 			}
 			delete( es.Requests, rsp.SeqId )
 			utilities.SysLog.Infof("删除等待序列，设备【%s】, 伞编号【%X】， 序列号【%d】", r.Equipment.Sn, rsp.UmbrellaSn, rsp.SeqId)
@@ -212,15 +227,38 @@ func (es *EquipmentService) HandleUmbrellaOutRsp(r *network.Response, p *network
 	return true, nil
 }
 
-//HandleChannelInspectRsp: 设备通道检查反馈
+//HandleChannelInspectRsp: 设备通道检查反馈（服务端发起）
 func (es *EquipmentService) HandleChannelInspectRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
 	rsp, ok := p.Packer.(*network.CmdChannelInspectRspPkt)
 	if ok {
 		utilities.SysLog.Noticef("收到设备【%s】通道检查反馈, 通道【%d】,状态【%s】,序列号【%d】",r.Equipment.Sn, rsp.Channel, utilities.RspStatusDesc(rsp.Status), rsp.SeqId)
-		p.Conn.Equipment.SetChannelStatus(rsp.Channel, rsp.Status)
+		rescue :=  p.Conn.Equipment.SetChannelStatus(rsp.Channel, rsp.Status)
+		if rescue {
+			es.RescueChannel(r, p, rsp.Channel)
+		}
 		if rsp.Channel < p.Conn.Equipment.Channels {
 			nextId := rsp.Channel + 1
 			p.Conn.ChannelInspect(nextId)
+		}
+	}
+	return true, nil
+}
+
+//HandleChannelInspectRsp: 设备通道救援反馈（服务端发起）
+func (es *EquipmentService) HandleChannelRescueRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
+	rsp, ok := p.Packer.(*network.CmdChannelRescueRspPkt)
+	if ok {
+		utilities.SysLog.Noticef("收到设备【%s】通道救援反馈, 通道【%d】,状态【%s】,序列号【%d】",r.Equipment.Sn, rsp.Channel, utilities.RspStatusDesc(rsp.Status), rsp.SeqId)
+		rescue := p.Conn.Equipment.SetChannelStatus(rsp.Channel, rsp.Status)
+		if rescue {
+			//开启通道救援（恢复）命令
+			seqId := <-p.Conn.SeqId
+			r.Packer = &network.CmdChannelRescueReqPkt{
+				CmdData: network.CmdData{
+					SeqId:   seqId,
+					Channel: rsp.Channel,
+				},
+			}
 		}
 	}
 	return true, nil
@@ -244,6 +282,70 @@ func (es *EquipmentService) HandleUmbrellaInspect(r *network.Response, p *networ
 		}
 	}
 	return true, nil
+}
+
+//ClearCmdCache 最后清理发送过的命令缓存
+func (es *EquipmentService) ClearCmdCache(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
+	_, ok := p.SendCmdCache[r.SeqId]
+	if ok {
+		delete(p.SendCmdCache, r.SeqId)
+	}
+	return true, nil
+}
+
+//CatchException 异常状态处理
+func (es *EquipmentService) HandleException(r *network.Response, p *network.Packet, seqId uint8, status uint8, channel uint8)  (bool, error) {
+	desc := ""
+	msg := &models.Message{}
+	switch status {
+	case utilities.RspStatusChannelBusy:
+		desc = "通道忙（有指令未完成）"
+	case utilities.RspStatusTimeout:
+		fallthrough
+	case utilities.RspStatusChannelErrLock:
+		desc = "通道锁异常/超时"
+		rescue := p.Equipment.SetChannelStatus(channel, status)
+		if rescue {
+			//开启通道救援（恢复）命令
+			es.RescueChannel(r, p, channel)
+		}
+		desc = ""
+	case utilities.RspStatusGprsErr:
+		desc = "网络错误"
+	case utilities.RspStatusUnknowError:
+		desc = "未知错误"
+	case utilities.RspStatusDataErr:
+		desc = "数据错"
+	case utilities.RspStatusChannelTimeout:
+		desc = "通道超时"
+	case utilities.RspStatusChannelMiddle:
+		desc = "通道锁状态-中间"
+	case utilities.RspStatusChannelBorrow:
+		desc = "通道锁状态-借伞"
+	case utilities.RspStatusChannelReturn:
+		desc = "通道锁状态-还伞"
+	case utilities.RspStatusChannelErr:
+		desc = "通道命令不支持"
+	case utilities.RspStatusNotMatch:
+		desc = "通道和命令不匹配"
+	case utilities.RspStatusChannelErrSN:
+		desc = "通道伞SN不匹配"
+
+	}
+	if desc != ""{
+		msg.AddEquipmentError(p.Equipment.Sn, p.Equipment.ID, p.Equipment.SiteId, desc)
+	}
+	return true, nil
+}
+
+func (es *EquipmentService) RescueChannel(r *network.Response,  p *network.Packet, channel uint8){
+	seqId := <- p.Conn.SeqId
+	r.Packer = &network.CmdChannelRescueReqPkt{
+		CmdData: network.CmdData{
+			SeqId:   seqId,
+			Channel: channel,
+		},
+	}
 }
 
 var EquipmentSrv *EquipmentService

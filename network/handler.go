@@ -1,6 +1,9 @@
 package network
 
-import "log"
+import (
+	"log"
+	"time"
+)
 
 type Packet struct {
 	Packer
@@ -11,6 +14,7 @@ type Response struct {
 	*Packet
 	Packer
 	SeqId uint8
+	Status uint8
 }
 
 type Handler interface {
@@ -33,5 +37,10 @@ type HandlerFunc func(*Response, *Packet, *log.Logger) (bool, error)
 // ServeHTTP calls f(r, p).
 func (f HandlerFunc) ServeHandle(r *Response, p *Packet, l *log.Logger) (bool, error) {
 	return f(r, p, l)
+}
+
+type Cmd struct {
+	packer Packer
+	sended time.Time
 }
 
