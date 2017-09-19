@@ -18,6 +18,7 @@ type Price struct {
 	End time.Time
 	IsDefault uint
 	Status uint
+	DelaySeconds uint
 }
 
 func (Price) TableName() string {

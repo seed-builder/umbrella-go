@@ -114,7 +114,7 @@ func (m *Equipment)SetChannelStatus(num uint8, status uint8) bool {
 	if ok {
 		rescue := false
 		n.Status = status
-		if status == utilities.RspStatusChannelTimeout {
+		if status == utilities.RspStatusChannelTimeout || status ==  utilities.RspStatusTimeout {
 			n.Valid = false
 			msg := &Message{}
 			msg.AddChannelError(m.Sn, m.ID, m.SiteId, uint(num))

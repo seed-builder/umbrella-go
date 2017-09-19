@@ -34,7 +34,7 @@ func (m *Message) AddChannelError(sn string, equipment_id uint, site_id uint, ch
 	msg.Channel = channel
 	msg.Category = 1
 	msg.Level = 2 // warning
-	msg.Title = fmt.Sprintf("设备【%s】通道【%d】异常", sn, channel)
+	msg.Title = fmt.Sprintf("设备【%s】通道【%d】异常/超时", sn, channel)
 	msg.Content = msg.Title
 	utilities.MyDB.Create(msg)
 }

@@ -5,9 +5,9 @@ import (
 	"sync"
 	"umbrella/network"
 	"umbrella/utilities"
-	"math/rand"
+	//"math/rand"
 	//"encoding/hex"
-	"encoding/hex"
+	//"encoding/hex"
 )
 
 const (
@@ -30,7 +30,7 @@ func startAClient(idx int, sn string) {
 	defer wg.Done()
 	defer c.Disconnect()
 	//119.23.214.176, 39.108.180.41
-	err := c.Connect("119.23.214.176:7777", sn, connectTimeout)
+	err := c.Connect(":7777", sn, connectTimeout)
 	if err != nil {
 		utilities.SysLog.Errorf("client %d: connect error: %s.", idx, err)
 		return
@@ -42,19 +42,19 @@ func startAClient(idx int, sn string) {
 	for {
 		select {
 		case <-t.C:
-			p :=  &network.CmdUmbrellaInspectReqPkt{}
-			p.Channel = 1
-			var i = rand.Intn(5)
-			sn := umbrellaSns[i]
-			//utilities.SysLog.Infof("client %d: prepare to send a CmdUmbrellaInspectReqPkt request  SN: %s,  ChannelNum: %d.", idx, sn, p.Channel)
-			p.UmbrellaSn, _ = hex.DecodeString(sn)
-			err = c.SendReqPkt(p)
-			utilities.SysLog.Infof("client %d: send a CmdUmbrellaInspectReqPkt in request : %v.", idx, p)
-			if err != nil {
-				utilities.SysLog.Infof("client %d: send a CmdUmbrellaInspectReqPkt in request error: %s.", idx, err)
-			} else {
-				utilities.SysLog.Infof("client %d: send a CmdUmbrellaInspectReqPkt in request ok", idx)
-			}
+			//p :=  &network.CmdUmbrellaInspectReqPkt{}
+			//p.Channel = 1
+			//var i = rand.Intn(5)
+			//sn := umbrellaSns[i]
+			////utilities.SysLog.Infof("client %d: prepare to send a CmdUmbrellaInspectReqPkt request  SN: %s,  ChannelNum: %d.", idx, sn, p.Channel)
+			//p.UmbrellaSn, _ = hex.DecodeString(sn)
+			//err = c.SendReqPkt(p)
+			//utilities.SysLog.Infof("client %d: send a CmdUmbrellaInspectReqPkt in request : %v.", idx, p)
+			//if err != nil {
+			//	utilities.SysLog.Infof("client %d: send a CmdUmbrellaInspectReqPkt in request error: %s.", idx, err)
+			//} else {
+			//	utilities.SysLog.Infof("client %d: send a CmdUmbrellaInspectReqPkt in request ok", idx)
+			//}
 			break
 		default:
 		}
@@ -88,7 +88,7 @@ func startAClient(idx int, sn string) {
 				CmdData: network.CmdData{
 					Channel: p.Channel,
 				},
-				Status: utilities.RspStatusSuccess,
+				Status: utilities.RspStatusChannelTimeout,
 			}
 			err := c.SendRspPkt(rsp, p.SeqId)
 			if err != nil {

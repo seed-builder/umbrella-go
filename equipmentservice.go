@@ -10,6 +10,7 @@ import (
 	"umbrella/models"
 	"fmt"
 	"umbrella/utilities"
+	"sync/atomic"
 )
 
 //EquipmentService is 单台设备管理服务，
@@ -30,6 +31,7 @@ func (es *EquipmentService) ListenAndServe(addr string, ver  network.Type, t tim
 	//}
 	handlers := []network.Handler{
 		network.HandlerFunc(es.HandleDataErr),
+		network.HandlerFunc(es.HandleActiveTestRsp),
 		network.HandlerFunc(es.HandleConnect),
 		network.HandlerFunc(es.HandleUmbrellaIn),
 		network.HandlerFunc(es.HandleUmbrellaOutRsp),
@@ -134,6 +136,17 @@ func (es *EquipmentService) HandleDataErr(r *network.Response, p *network.Packet
 		return false, nil
 	}
 	return true, nil
+}
+
+func (es *EquipmentService) HandleActiveTestRsp(r *network.Response, p *network.Packet, l *log.Logger) (bool, error){
+	rsp, ok := r.Packet.Packer.(*network.CmdActiveTestRspPkt)
+	if ok {
+		atomic.AddInt32(&p.Conn.Counter, -1)
+		if rsp.Channel > 0 && rsp.Status == utilities.RspStatusChannelErrLock {
+			es.RescueChannel(r, p, rsp.Channel)
+		}
+	}
+	return  true, nil
 }
 
 //HandleConnect 设备登陆服务器
@@ -339,13 +352,13 @@ func (es *EquipmentService) HandleException(r *network.Response, p *network.Pack
 }
 
 func (es *EquipmentService) RescueChannel(r *network.Response,  p *network.Packet, channel uint8){
-	seqId := <- p.Conn.SeqId
-	r.Packer = &network.CmdChannelRescueReqPkt{
-		CmdData: network.CmdData{
-			SeqId:   seqId,
-			Channel: channel,
-		},
-	}
+	//seqId := <- p.Conn.SeqId
+	//r.Packer = &network.CmdChannelRescueReqPkt{
+	//	CmdData: network.CmdData{
+	//		SeqId:   seqId,
+	//		Channel: channel,
+	//	},
+	//}
 }
 
 var EquipmentSrv *EquipmentService

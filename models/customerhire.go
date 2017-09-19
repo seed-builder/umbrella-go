@@ -54,7 +54,7 @@ func (m *CustomerHire) Create(equipment *Equipment, umbrella *Umbrella, customer
 		m.Entity = m
 		m.CustomerId = customerId
 		m.CreatorId = customerId
-		m.HireAt = time.Now().Local().Add(1 * time.Minute)
+		m.HireAt = time.Now().Local()//.Add(1 * time.Minute)
 		m.UmbrellaId = umbrella.ID
 		m.HireEquipmentId = equipment.ID
 		m.HireSiteId = equipment.SiteId
@@ -128,13 +128,20 @@ func (m *CustomerHire) CalculateFee(){
 		price := &Price{}
 		price.Query().First(price, m.PriceId)
 		if price.ID > 0 {
-			hours := m.ReturnAt.Sub(m.HireAt).Hours()
-			days := utilities.Round( hours / 24 , 1)
+			calAt := m.HireAt.Add(time.Duration(price.DelaySeconds) * time.Second)
+			hours := m.ReturnAt.Sub(calAt).Hours()
 			var fee float64
-			if days > float64(price.HireFreeDays) {
-				fee = (days - float64(price.HireFreeDays)) * price.HireDayCash
-			}else {
+			var days float64
+			if hours > 0 {
+				days := utilities.Round(hours/24, 2)
+				if days > float64(price.HireFreeDays) {
+					fee = (days - float64(price.HireFreeDays)) * price.HireDayCash
+				} else {
+					days = 0
+				}
+			} else {
 				days = 0
+				fee = 0
 			}
 			m.HireAmt = utilities.Round(fee, 2)
 			m.HireDay = days
@@ -145,6 +152,7 @@ func (m *CustomerHire) CalculateFee(){
 			utilities.SysLog.Noticef("计算费用：租借单【%d】,共【%.1f】天,租金费用【%.2f】", m.ID, days, fee)
 			//结算
 			m.Settle()
+
 		}
 	}
 }

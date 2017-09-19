@@ -65,7 +65,7 @@ type Conn struct {
 	n       int32         // continuous send times when no response back
 	done    chan struct{}
 	exceed  chan struct{}
-	counter int32
+	Counter int32
 
     rw	net.Conn
 	State State
@@ -147,6 +147,7 @@ func (c *Conn) Serve() {
 				continue
 			}
 			c.Errorf("读取命令错误：%v ", err)
+			time.Sleep(1*time.Second)
 			//break
 			continue
 		}
@@ -286,11 +287,6 @@ func (c *Conn) parseResponse(i Packer) (*Response, error)  {
 }
 
 func (c *Conn) finishPacket(r *Response) error {
-	if _, ok := r.Packet.Packer.(*CmdActiveTestRspPkt); ok {
-		atomic.AddInt32(&c.counter, -1)
-		return nil
-	}
-
 	if r.Packer == nil {
 		// For response packet received, it need not
 		// to send anything back.
@@ -318,7 +314,7 @@ func (c *Conn) startActiveTest(){
 				return
 			case <- t.C:
 				// check whether c.counter exceeds
-				if atomic.LoadInt32(&c.counter) >= c.n {
+				if atomic.LoadInt32(&c.Counter) >= c.n {
 					c.Infof("没接收到客户端【%v】的维持包反馈【%d】次!",
 						c.rw.RemoteAddr(), c.n)
 					exceed <- struct{}{}
@@ -327,11 +323,10 @@ func (c *Conn) startActiveTest(){
 				// send a active test packet to peer, increase the active test counter
 				p := &CmdActiveTestReqPkt{}
 				err := c.SendPkt(p, 0)
-				c.Infof("向客户端【%v】发送维持包数据 ", c.rw.RemoteAddr())
+				atomic.AddInt32(&c.Counter, 1)
+				c.Infof("向客户端【%v】发送维持包数据, 发送次数【%d】, 临界值【%d】 ", c.rw.RemoteAddr(), c.Counter, c.n)
 				if err != nil {
 					c.Infof("向客户端【%v】发送维持包数据错误【$s】", c.rw.RemoteAddr(), err)
-				} else {
-					atomic.AddInt32(&c.counter, 1)
 				}
 			}
 		}
