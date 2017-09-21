@@ -77,7 +77,11 @@ func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelN
 		return utilities.RspStatusUmbrellaExpired
 	}
 	if m.Status == UmbrellaStatusIn {
-		return utilities.RspStatusSuccess
+		if m.EquipmentChannelNum == channelNum {
+			return utilities.RspStatusSuccess
+		}else{
+			go equipment.OutChannel(m.EquipmentChannelNum, nil)
+		}
 	}
 	m.Entity = m
 	m.EquipmentId = equipment.ID
