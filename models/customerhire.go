@@ -5,6 +5,10 @@ import (
 	"time"
 	"umbrella/utilities"
 	"errors"
+	"math"
+	"net/http"
+	"fmt"
+	"io/ioutil"
 )
 
 //(1-初始(未支付押金)，2-租借中, 3-还伞完毕，待支付租金 4-已完成, 5-逾期未归还)
@@ -29,9 +33,9 @@ type CustomerHire struct {
 	ReturnEquipmentId uint
 	ReturnSiteId uint
 	ReturnAt time.Time
-	ExpireDay uint
+	ExpireHours uint
 	ExpiredAt time.Time
-	HireDay float64
+	HireHours float64
 	HireAmt float64
 	Status uint
 	PriceId uint
@@ -40,31 +44,15 @@ type CustomerHire struct {
 	ReturnEquipment Equipment `gorm:"ForeignKey:ReturnEquipmentId"`
 }
 
-
 func (CustomerHire) TableName() string {
 	return "customer_hires"
 }
 
 func (m *CustomerHire) Query() *gorm.DB{
-	return utilities.MyDB.Model(m)
-}
-
-func (m *CustomerHire) Create(equipment *Equipment, umbrella *Umbrella, customerId uint) (bool, error) {
-	if umbrella.ID > 0 {
-		m.Entity = m
-		m.CustomerId = customerId
-		m.CreatorId = customerId
-		m.HireAt = time.Now().Local()//.Add(1 * time.Minute)
-		m.UmbrellaId = umbrella.ID
-		m.HireEquipmentId = equipment.ID
-		m.HireSiteId = equipment.SiteId
-		m.Status = UmbrellaHireStatusNormal
-		m.Save()
-		return true, nil
-	}else{
-		return  false, errors.New("伞ID不能为0")
+	if m.db == nil{
+		m.db = utilities.MyDB
 	}
-	//go m.FreezeDepositFee(umbrella)
+	return m.db.Model(m)
 }
 
 //还伞
@@ -84,14 +72,18 @@ func (hire *CustomerHire) UmbrellaReturn(umbrellaId uint, equipmentId uint, site
 			status = UmbrellaStatusIn //UmbrellaStatusAbnormal
 		}
 		hire.Query().Save(hire)
-		go hire.CalculateFee()
+		hire.CalculateFee()
+		if status == UmbrellaStatusIn{
+			go hire.Notice()
+		}
 	}
 	return status
 }
 
-//CalculateHireFee 结算租借押金费用
+//CalculateHireFee 冻结押金费用
 func (m *CustomerHire) FreezeDepositFee(umbrella *Umbrella){
 	price := &Price{}
+	price.InitDb(m.db)
 	if umbrella.PriceId == 0 {
 		price.Query().First(price, "is_default = ?", 1)
 	}else{
@@ -99,24 +91,23 @@ func (m *CustomerHire) FreezeDepositFee(umbrella *Umbrella){
 	}
 	if price.ID > 0 {
 		m.DepositAmt = price.DepositCash
-		m.ExpireDay = price.HireExpireDays
-		m.ExpiredAt =  time.Now().Local().Add(time.Hour * 24 * time.Duration(price.HireExpireDays))
-		m.Query().Updates(map[string]interface{}{
-			"deposit_amt": m.DepositAmt,
-			"expire_day": m.ExpireDay,
-			"expired_at": m.ExpiredAt,
-			"price_id": price.ID,
-		})
+		m.ExpireHours = price.HireExpireHours
+		m.ExpiredAt =  time.Now().Local().Add(time.Hour * time.Duration(price.HireExpireHours))
+		m.PriceId = price.ID
 
 		account := &CustomerAccount{}
+		account.InitDb(m.db)
 		account.Query().First(account, "customer_id = ?", m.CustomerId)
 		//utilities.SysLog.Infof("用户【%d】的账户id信息【%d】", m.CustomerId, account.ID)
 		if account.ID > 0 {
 			res := account.FreezingDeposit(price.DepositCash)
-			utilities.SysLog.Noticef("用户【%d】的冻结账户【%d】资金【%f】", m.CustomerId, account.ID, price.DepositCash)
 			if res {
+				utilities.SysLog.Noticef("成功冻结用户账户【%d】资金【%.2f】", account.ID, price.DepositCash)
 				pay := &CustomerPayment{}
+				pay.InitDb(m.db)
 				pay.PayDeposit(m.ID, m.CustomerId, account.ID, price.DepositCash)
+			}else{
+				utilities.SysLog.Noticef("冻结账户【%d】资金【%.2f】失败， 余额不足！", m.CustomerId, account.ID, price.DepositCash)
 			}
 		}
 	}
@@ -131,25 +122,19 @@ func (m *CustomerHire) CalculateFee(){
 			calAt := m.HireAt.Add(time.Duration(price.DelaySeconds) * time.Second)
 			hours := m.ReturnAt.Sub(calAt).Hours()
 			var fee float64
-			var days float64
-			if hours > 0 {
-				days := utilities.Round(hours/24, 2)
-				if days > float64(price.HireFreeDays) {
-					fee = (days - float64(price.HireFreeDays)) * price.HireDayCash
-				} else {
-					days = 0
-				}
+			if hours > float64(price.HireFreeHours) {
+				calHours := hours - float64(price.HireFreeHours)
+				fee = math.Ceil(calHours/price.HireUnitHours) * price.HirePrice
 			} else {
-				days = 0
 				fee = 0
 			}
 			m.HireAmt = utilities.Round(fee, 2)
-			m.HireDay = days
+			m.HireHours = hours
 			m.Query().Updates(map[string]interface{}{
-				"hire_day": days,
-				"hire_amt": m.HireAmt,
+				"hire_hours": hours,
+				"hire_amt":   m.HireAmt,
 			})
-			utilities.SysLog.Noticef("计算费用：租借单【%d】,共【%.1f】天,租金费用【%.2f】", m.ID, days, fee)
+			utilities.SysLog.Noticef("计算费用：租借单【%d】,共【%.1f】小时,租金费用【%.2f】", m.ID, hours, fee)
 			//结算
 			m.Settle()
 
@@ -173,15 +158,47 @@ func(m *CustomerHire) Settle(){
 			pay.PayFee(m.ID, m.CustomerId, account.ID, m.HireAmt)
 			complete = 1
 		} else {
-			utilities.SysLog.Noticef("用户【%d】余额【%f】不足，无法结算租借单【%d】租金费用【%f】", m.CustomerId, account.BalanceAmt, m.ID, m.HireAmt)
+			utilities.SysLog.Noticef("用户【%d】余额【%f】不足，无法结算租借单【%d】租金费用【%.2f】", m.CustomerId, account.BalanceAmt, m.ID, m.HireAmt)
 		}
 	}
 	if complete == 1 {
 		m.Query().Updates(map[string]interface{}{
 			"status": UmbrellaHireStatusCompleted,
 		})
-		utilities.SysLog.Noticef("用户【%d】租借单【%d】租金费用【%f】结算完成", m.CustomerId, m.ID, m.HireAmt)
+		utilities.SysLog.Noticef("用户【%d】租借单【%d】租金费用【%.2f】结算完成", m.CustomerId, m.ID, m.HireAmt)
 		account.ReturnDeposit(m.DepositAmt)
 		pay.ReturnDeposit(m.ID, m.CustomerId, account.ID, m.DepositAmt)
 	}
+}
+
+//发送消息通知已经还伞
+func (m *CustomerHire) Notice(){
+	// /mobile/customer-hire/return-wechat-send/{id}
+	url := utilities.SysConfig.NoticeHost + fmt.Sprintf("/mobile/customer-hire/return-wechat-send/%d", m.ID)
+	resp, _ := http.Get(url)
+	defer resp.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+	utilities.SysLog.Noticef("发送已还伞通知， url【%s】 resp【%s】", url, body)
+}
+
+//创建租借记录
+func CreateCustomerHire(equipment *Equipment, umbrella *Umbrella, customerId uint, db *gorm.DB) (*CustomerHire, error) {
+	if umbrella.ID > 0 {
+		entity := &CustomerHire{}
+		entity.InitDb(db)
+		entity.Entity = entity
+		entity.CustomerId = customerId
+		entity.CreatorId = customerId
+		entity.HireAt = time.Now().Local()//.Add(1 * time.Minute)
+		entity.UmbrellaId = umbrella.ID
+		entity.HireEquipmentId = equipment.ID
+		entity.HireSiteId = equipment.SiteId
+		entity.Status = UmbrellaHireStatusNormal
+		entity.FreezeDepositFee(umbrella)
+		entity.Save()
+		return entity, nil
+	}else{
+		return  nil, errors.New("伞ID不能为0, 创建租借单失败")
+	}
+	//go m.FreezeDepositFee(umbrella)
 }

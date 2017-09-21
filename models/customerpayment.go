@@ -31,7 +31,10 @@ func (CustomerPayment) TableName() string {
 }
 
 func (m *CustomerPayment) Query() *gorm.DB{
-	return utilities.MyDB.Model(m)
+	if m.db == nil{
+		m.db = utilities.MyDB
+	}
+	return m.db.Model(m)
 }
 
 //支付费用
@@ -54,6 +57,7 @@ func (cp *CustomerPayment) PayFee(hireId uint, customerId uint, accountId uint, 
 //支付押金
 func (cp *CustomerPayment) PayDeposit(hireId uint, customerId uint, accountId uint, amt float64) {
 	m := &CustomerPayment{}
+	m.InitDb(cp.db)
 	m.Entity = m
 	m.CustomerId = customerId
 	m.CustomerAccountId = accountId

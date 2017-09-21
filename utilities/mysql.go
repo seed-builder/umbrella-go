@@ -22,7 +22,7 @@ func init() {
 	// 连接池
 	if err == nil {
 		MyDB.DB().SetMaxIdleConns(50)
-		MyDB.DB().SetMaxOpenConns(100)
+		MyDB.DB().SetMaxOpenConns(150)
 		MyDB.DB().Ping()
 		MyDB.LogMode(true)
 	} else {

@@ -10,3 +10,4 @@ db_user: root
 db_password:
 db_database: umbrella
 salt: sfadfasdf
+notice_host: http://localhost

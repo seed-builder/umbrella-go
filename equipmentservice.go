@@ -76,6 +76,9 @@ func (es *EquipmentService) OpenChannel(equipmentSn string, channelNum uint8) (u
 		if channelNum == 0 {
 			channelNum = conn.Equipment.ChooseChannel()
 		}
+		if channelNum == 0 {
+			return 0 , 0, nil
+		}
 		var seqId uint8
 		req := &network.CmdTakeUmbrellaReqPkt{}
 		req.Channel = channelNum
@@ -192,6 +195,7 @@ func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Pac
 	umbrella := &models.Umbrella{}
 	sn := fmt.Sprintf("%X", req.UmbrellaSn)
 	resp.Status = umbrella.InEquipment(r.Equipment, sn, req.Channel)
+	p.Equipment.SetChannelStatus(req.Channel, utilities.RspStatusSuccess)
 	return true, nil
 
 }
@@ -205,6 +209,7 @@ func (es *EquipmentService) HandleTakeUmbrellaRsp(r *network.Response, p *networ
 			umbrella := &models.Umbrella{}
 			sn := fmt.Sprintf("%X", rsp.UmbrellaSn)
 			status := umbrella.Check(sn)
+			utilities.SysLog.Noticef("设备【%s】取伞反馈,伞编号【%X】,查询出的该伞状态是【%s】,序列号【%d】",r.Equipment.Sn, sn, status, rsp.SeqId)
 			if status != utilities.RspStatusSuccess {
 				r.Packer = nil
 				c, ok := es.Requests[rsp.SeqId]

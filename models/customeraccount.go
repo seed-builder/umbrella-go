@@ -23,7 +23,10 @@ func (CustomerAccount) TableName() string {
 }
 
 func (m *CustomerAccount) Query() *gorm.DB{
-	return utilities.MyDB.Model(m)
+	if m.db == nil{
+		m.db = utilities.MyDB
+	}
+	return m.db.Model(m)
 }
 
 //冻结押金

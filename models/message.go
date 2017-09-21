@@ -23,8 +23,11 @@ func (Message) TableName() string {
 	return "messages"
 }
 
-func (m *Message) Query() *gorm.DB {
-	return utilities.MyDB.Model(m)
+func (m *Message) Query() *gorm.DB{
+	if m.db == nil{
+		m.db = utilities.MyDB
+	}
+	return m.db.Model(m)
 }
 
 func (m *Message) AddChannelError(sn string, equipment_id uint, site_id uint, channel uint){

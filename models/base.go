@@ -9,22 +9,30 @@ type Base struct {
 	CreatorId uint
 	ModifierId uint
 	Entity interface{} `gorm:"-"`
+	db *gorm.DB `gorm:"-"`
+}
+
+func (m *Base) InitDb(db *gorm.DB) {
+	m.db = db
 }
 
 func (m *Base) Query() *gorm.DB{
-	return utilities.MyDB
+	if m.db == nil{
+		m.db = utilities.MyDB
+	}
+	return m.db
 }
 
 func (m *Base) Save() error{
-	utilities.MyDB.Save(m.Entity)
+	m.Query().Save(m.Entity)
 	return nil
 }
 
 func (m *Base) Remove() error{
-	utilities.MyDB.Delete(m.Entity)
+	m.Query().Delete(m.Entity)
 	return nil
 }
 
 func (m *Base) Update(properties map[string]interface{}){
-	utilities.MyDB.Model(m.Entity).Updates(properties)
+	m.Query().Model(m.Entity).Updates(properties)
 }

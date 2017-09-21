@@ -17,7 +17,7 @@ const (
 	V10 Type = 0x10
 	CMDHEAD byte = 0xAA
 	CMDFOOT byte = 0x55
-	defaultReadBufferSize = 64
+	defaultReadBufferSize = 128
 )
 
 // Errors for conn operations
@@ -147,9 +147,7 @@ func (c *Conn) Serve() {
 				continue
 			}
 			c.Errorf("读取命令错误：%v ", err)
-			time.Sleep(1*time.Second)
-			//break
-			continue
+			break
 		}
 
 		c.Infof("客户端【%v】,有【%d】条命令待处理", c.rw.RemoteAddr(), len(rs))

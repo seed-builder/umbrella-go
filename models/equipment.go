@@ -49,7 +49,10 @@ func (m *Equipment) BeforeDelete() (err error) {
 }
 
 func (m *Equipment) Query() *gorm.DB{
-	return utilities.MyDB.Model(m)
+	if m.db == nil{
+		m.db = utilities.MyDB
+	}
+	return m.db.Model(m)
 }
 
 func (m *Equipment) InitChannel() {
@@ -69,14 +72,14 @@ func (m *Equipment) InitChannel() {
 //ChooseChannel 选择伞保有量最多的通道
 func (m *Equipment) ChooseChannel() uint8 {
 	var len uint8
-	channelNum := uint8(1)
+	channelNum := uint8(0)
 	for n, l :=  range m.ChannelCache {
-		if n != m.UsedChannelNum && l.Valid &&l.Umbrellas > len {
+		if n != m.UsedChannelNum && l.Valid && l.Umbrellas > len {
 			channelNum = n
 			len = l.Umbrellas
 		}
 	}
-	if len == 0 && m.UsedChannelNum > 0 {
+	if len == 0 && m.UsedChannelNum > 0 && m.ChannelCache[m.UsedChannelNum].Umbrellas > len {
 		channelNum = m.UsedChannelNum
 	}
 	return channelNum
@@ -90,13 +93,18 @@ func (m *Equipment) InChannel(channelNum uint8){
 	utilities.MyDB.Model(m).Update("have", m.Have )
 }
 
-func (m *Equipment) OutChannel(channelNum uint8){
+func (m *Equipment) OutChannel(channelNum uint8, db *gorm.DB) error {
 	n := m.ChannelCache[channelNum]
 	if n.Umbrellas > 0 {
 		n.Umbrellas = n.Umbrellas - 1
 		m.Have = m.Have - 1
-		utilities.MyDB.Model(m).Update("have", m.Have)
+		if db != nil {
+			return db.Model(m).Update("have", m.Have).Error
+		}else {
+			return utilities.MyDB.Model(m).Update("have", m.Have).Error
+		}
 	}
+	return nil
 }
 
 func (m *Equipment) Online(ip string){

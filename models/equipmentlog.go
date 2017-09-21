@@ -33,7 +33,10 @@ func (m *EquipmentLog) BeforeDelete() (err error) {
 }
 
 func (m *EquipmentLog) Query() *gorm.DB{
-	return utilities.MyDB.Model(m)
+	if m.db == nil{
+		m.db = utilities.MyDB
+	}
+	return m.db.Model(m)
 }
 
 func (m *EquipmentLog) NewLog(level int, content string) bool {

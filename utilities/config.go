@@ -20,6 +20,7 @@ type Config struct {
 	DbPassword string `yaml:"db_password"`
 	DbDatabase string `yaml:"db_database"`
 	Salt string `yaml:"salt"`
+	NoticeHost string `yaml:"notice_host"`
 }
 
 var SysConfig Config

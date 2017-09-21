@@ -88,7 +88,7 @@ func startAClient(idx int, sn string) {
 				CmdData: network.CmdData{
 					Channel: p.Channel,
 				},
-				Status: utilities.RspStatusChannelTimeout,
+				Status: utilities.RspStatusSuccess,
 			}
 			err := c.SendRspPkt(rsp, p.SeqId)
 			if err != nil {
@@ -108,7 +108,8 @@ func startAClient(idx int, sn string) {
 			utilities.SysLog.Infof("client %d: receive a network take umbrella request: %v.", idx, p)
 			rsp := &network.CmdTakeUmbrellaRspPkt{
 				Status: utilities.RspStatusSuccess,
-				UmbrellaSn: []byte{0x88, 0x04, 0xe3, 0x84},
+				//17617E62
+				UmbrellaSn: []byte{0x17, 0x61, 0x7e, 0x62},
 			}
 			rsp.Channel = p.Channel
 			err := c.SendRspPkt(rsp, p.SeqId)

@@ -48,7 +48,10 @@ func (m *Umbrella) BeforeDelete() (err error) {
 }
 
 func (m *Umbrella) Query() *gorm.DB{
-	return utilities.MyDB.Model(m)
+	if m.db == nil{
+		m.db = utilities.MyDB
+	}
+	return m.db.Model(m)
 }
 
 func (m *Umbrella) Check(umbrellaSn string) uint8 {

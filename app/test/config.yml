@@ -10,3 +10,4 @@ db_user: root
 db_password:
 db_database: umbrella
 salt: kbLiBsZUsF6br2FyZ9UfRv74UU2ObNOj
+notice_host: http://localhost
