@@ -3,41 +3,18 @@ package umbrella
 import (
 	"net/http"
 	"github.com/gin-gonic/gin"
-	"log"
 	"umbrella/models"
 	"strconv"
 	"strings"
 	"fmt"
 	"umbrella/utilities"
+	"umbrella/network"
 )
 
 func LoadEquipmentRoutes(r gin.IRouter)  {
 
 	r.GET("/equipment", func(c *gin.Context) {
 		c.String(http.StatusOK, "equipment rest api !")
-	})
-
-	r.POST("/equipment/:sn/open", func(c *gin.Context) {
-		sn :=  c.Param("sn")
-		channelNum, seqId, err := EquipmentSrv.OpenChannel(sn, 0)
-		if err == nil {
-			chan_sn, ok := EquipmentSrv.Requests[seqId]
-			if ok {
-				umbrellaSn := <- chan_sn
-				log.Println("channel opened!")
-
-				if conn, ok := EquipmentSrv.EquipmentConns[sn]; ok {
-					conn.Equipment.OutChannel(channelNum, nil)
-					umbrella := &models.Umbrella{}
-					//sn := strconv.Itoa(int(umbrellaSn))
-					umbrellaSn = strings.ToUpper(umbrellaSn)
-					umbrella.OutEquipment(conn.Equipment, umbrellaSn, channelNum)
-				}
-				c.JSON(http.StatusOK, gin.H{"success": true, "equipment_sn": sn, "channel_num": channelNum, "umbrella_sn": umbrellaSn,  "err": "" })
-				return
-			}
-		}
-		c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
 	})
 
 	r.POST("/equipment/:sn/opennum/:num", func(c *gin.Context) {
@@ -47,24 +24,27 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 		if er != nil{
 			cn = 0
 		}
+		conn , ok:= EquipmentSrv.EquipmentConns[sn]
+		if !ok {
+			c.JSON(http.StatusOK, gin.H{"success": false, "err": "设备离线" })
+			return
+		}
 		channelNum, seqId, err := EquipmentSrv.OpenChannel(sn, uint8(cn))
 		if err == nil {
-			chan_sn, ok := EquipmentSrv.Requests[seqId]
+			chan_sn, ok := conn.UmbrellaRequests[seqId]
 			if ok {
-				umbrellaSn := <- chan_sn
-				log.Println("channel opened! umbrellaSn : ", umbrellaSn)
-				if umbrellaSn == ""{
-					c.JSON(http.StatusOK, gin.H{"success": false, "err": "超时" })
+				umbrellaRequest := <-chan_sn
+				if !umbrellaRequest.Success {
+					c.JSON(http.StatusOK, gin.H{"success": false, "err": umbrellaRequest.Err})
 					return
 				}
-				if conn, ok := EquipmentSrv.EquipmentConns[sn]; ok {
-					conn.Equipment.OutChannel(channelNum, nil)
-					umbrella := &models.Umbrella{}
-					//sn := strconv.Itoa(int(umbrellaSn))
-					umbrellaSn = strings.ToUpper(umbrellaSn)
-					umbrella.OutEquipment(conn.Equipment, umbrellaSn, channelNum)
-				}
-				c.JSON(http.StatusOK, gin.H{"success": true, "equipment_sn": sn, "channel_num": channelNum, "umbrella_sn": umbrellaSn,  "err": "" })
+				conn.Equipment.OutChannel(channelNum, nil)
+				umbrella := &models.Umbrella{}
+				//sn := strconv.Itoa(int(umbrellaSn))
+				umbrellaSn := strings.ToUpper(umbrellaRequest.Sn)
+				umbrella.OutEquipment(conn.Equipment, umbrellaSn, channelNum)
+
+				c.JSON(http.StatusOK, gin.H{"success": true, "equipment_sn": sn, "channel_num": channelNum, "umbrella_sn": umbrellaSn, "err": ""})
 				return
 			}
 		}
@@ -76,17 +56,24 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 		customerId := c.Param("customerId")
 		sign := c.Query("sign")
 		fmt.Println("sign = ", sign)
-		channelNum, seqId, err := EquipmentSrv.OpenChannel(sn, 0)
+		cid, _ := strconv.ParseUint(customerId, 10, 32)
+
+		conn , ok:= EquipmentSrv.EquipmentConns[sn]
+		if !ok || conn.State == network.CONN_CLOSED{
+			c.JSON(http.StatusOK, gin.H{"success": false, "err": "设备离线" })
+			return
+		}
+		channelNum, seqId, err := EquipmentSrv.BorrowUmbrella(uint(cid), sn, 0)
 		if channelNum == 0 && seqId == 0 {
 			c.JSON(http.StatusOK, gin.H{"success": false, "err": "无可用通道" })
 			return
 		}
 		if err == nil {
-			chan_sn, ok := EquipmentSrv.Requests[seqId]
+			chan_sn, ok := conn.UmbrellaRequests[seqId]
 			if ok {
-				umbrellaSn := <- chan_sn
-				if umbrellaSn == ""{
-					c.JSON(http.StatusOK, gin.H{"success": false, "err": "超时" })
+				umbrellaRequest := <- chan_sn
+				if !umbrellaRequest.Success {
+					c.JSON(http.StatusOK, gin.H{"success": false, "err": umbrellaRequest.Err })
 					return
 				}
 				if conn, ok := EquipmentSrv.EquipmentConns[sn]; ok {
@@ -96,8 +83,8 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 					umbrella.InitDb(tx)
 					//umbrella.OutEquipment(conn.Equipment, umbrellaSn, channelNum)
 					//usn := umbrellaSn
-					umbrella.OutEquipment(conn.Equipment, umbrellaSn, channelNum)
-					cid, _ := strconv.ParseUint(customerId, 10, 32)
+					umbrella.OutEquipment(conn.Equipment, umbrellaRequest.Sn, channelNum)
+
 					hire, err := models.CreateCustomerHire(conn.Equipment, umbrella, uint(cid), tx)
 					if hire != nil {
 						//hire.FreezeDepositFee(umbrella)

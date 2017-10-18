@@ -78,6 +78,11 @@ type Conn struct {
 	Equipment *models.Equipment
 	Ip string
 	SendCmdCache map[uint8]Cmd
+	//借伞请求人ID
+	Borrowers  map[uint8]uint
+	//出伞请求
+	UmbrellaRequests  map[uint8]chan UmbrellaRequest
+
 }
 
 func newSeqIdGenerator() (<-chan uint8, chan struct{}) {
@@ -115,6 +120,8 @@ func NewConn(svr *TcpServer, conn net.Conn, typ Type) *Conn {
 		done:  done,
 		Ip: conn.RemoteAddr().String(),
 		SendCmdCache: make(map[uint8]Cmd),
+		Borrowers: make(map[uint8]uint),
+		UmbrellaRequests: make(map[uint8]chan UmbrellaRequest),
 	}
 	tc := c.rw.(*net.TCPConn) // Always tcpconn
 	tc.SetKeepAlive(true) //Keepalive as default

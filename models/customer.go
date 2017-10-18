@@ -4,6 +4,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"time"
 	"umbrella/utilities"
+	"strings"
 )
 
 type Customer struct {
@@ -33,4 +34,18 @@ func (m *Customer) Query() *gorm.DB{
 		m.db = utilities.MyDB
 	}
 	return m.db.Model(m)
+}
+
+func (m *Customer) CanBorrowUmbrella(customerId uint, sn string) bool {
+	account := &CustomerAccount{}
+	account.Query().First(account,"customer_id = ?", customerId)
+	umbrella := &Umbrella{}
+	umbrella.Query().First(umbrella, "sn = ?", strings.ToUpper(sn))
+	price := &Price{}
+	if umbrella.PriceId == 0 {
+		price.Query().First(price, "is_default = ?", 1)
+	}else{
+		price.Query().First(price, umbrella.PriceId)
+	}
+	return price.DepositCash <= account.Deposit
 }

@@ -16,7 +16,7 @@ import (
 //EquipmentService is 单台设备管理服务，
 type EquipmentService struct {
 	EquipmentConns map[string]*network.Conn
-	Requests map[uint8]chan string
+	//Requests map[uint8]chan string
 }
 
 // ListenAndServe listens on the TCP network address addr
@@ -92,7 +92,7 @@ func (es *EquipmentService) OpenChannel(equipmentSn string, channelNum uint8) (u
 			//重发
 			go func() {
 				time.Sleep(time.Duration(utilities.SysConfig.TcpResendInterval) * time.Second)
-				_, ok := es.Requests[seqId]
+				_, ok := conn.UmbrellaRequests[seqId]
 				if ok {
 					utilities.SysLog.Infof("重发设备【%s】开启通道【%d】取伞命令 序列号【%d】!", equipmentSn, channelNum, seqId)
 					conn.SendPkt(req, seqId)
@@ -101,17 +101,70 @@ func (es *EquipmentService) OpenChannel(equipmentSn string, channelNum uint8) (u
 			//超时
 			go func() {
 				time.Sleep(time.Duration(utilities.SysConfig.TcpResendInterval * 2) * time.Second)
-				c, ok := es.Requests[seqId]
+				c, ok :=  conn.UmbrellaRequests[seqId]
 				if ok {
 					utilities.SysLog.Warningf("设备【%s】开启通道【%d】取伞命令超时 序列号【%d】!", equipmentSn, channelNum, seqId)
-					close(c)
-					delete( es.Requests, seqId )
+					c <- network.UmbrellaRequest{Success:false, Err: "超时"}
+					delete( conn.UmbrellaRequests, seqId )
 				}
 			}()
 
-			_, ok := es.Requests[seqId]
+			_, ok := conn.UmbrellaRequests[seqId]
 			if !ok {
-				es.Requests[seqId] = make(chan string)
+				conn.UmbrellaRequests[seqId] = make(chan network.UmbrellaRequest)
+			}
+			return channelNum , seqId, nil
+		}
+	} else {
+		utilities.SysLog.Infof("设备【%s】离线无法发送命令!", equipmentSn)
+		return 0, 0, errors.New("设备离线，无法发送命令")
+	}
+}
+
+//BorrowUmbrella 从设备借伞
+func (es *EquipmentService) BorrowUmbrella(customerId uint, equipmentSn string, channelNum uint8) (uint8, uint8, error) {
+	conn, ok := es.EquipmentConns[equipmentSn]
+	if ok && conn.State > 0  {
+		if channelNum == 0 {
+			channelNum = conn.Equipment.ChooseChannel()
+		}
+		if channelNum == 0 {
+			return 0 , 0, nil
+		}
+		var seqId uint8
+		req := &network.CmdTakeUmbrellaReqPkt{}
+		req.Channel = channelNum
+		seqId = <- conn.SeqId
+		utilities.SysLog.Infof("发送设备【%s】开启通道【%d】取伞命令 序列号【%d】!", equipmentSn, channelNum, seqId)
+		err := conn.SendPkt(req, seqId)
+
+		if err != nil {
+			return 0, 0, err
+		} else {
+			//重发
+			go func() {
+				time.Sleep(time.Duration(utilities.SysConfig.TcpResendInterval) * time.Second)
+				_, ok := conn.UmbrellaRequests[seqId]
+				if ok {
+					utilities.SysLog.Infof("重发设备【%s】开启通道【%d】取伞命令 序列号【%d】!", equipmentSn, channelNum, seqId)
+					conn.SendPkt(req, seqId)
+				}
+			}()
+			//超时
+			go func() {
+				time.Sleep(time.Duration(utilities.SysConfig.TcpResendInterval * 2) * time.Second)
+				c, ok :=  conn.UmbrellaRequests[seqId]
+				if ok {
+					utilities.SysLog.Warningf("设备【%s】开启通道【%d】取伞命令超时 序列号【%d】!", equipmentSn, channelNum, seqId)
+					c <- network.UmbrellaRequest{Success:false, Err: "超时"}
+					delete( conn.UmbrellaRequests, seqId )
+				}
+			}()
+			//记录借伞人ID
+			conn.Borrowers[seqId] = customerId
+			_, ok := conn.UmbrellaRequests[seqId]
+			if !ok {
+				conn.UmbrellaRequests[seqId] = make(chan network.UmbrellaRequest)
 			}
 			return channelNum , seqId, nil
 		}
@@ -210,19 +263,30 @@ func (es *EquipmentService) HandleTakeUmbrellaRsp(r *network.Response, p *networ
 			sn := fmt.Sprintf("%X", rsp.UmbrellaSn)
 			status := umbrella.Check(sn)
 			utilities.SysLog.Noticef("设备【%s】取伞反馈,伞编号【%X】,查询出的该伞状态是【%s】,序列号【%d】",r.Equipment.Sn, sn, utilities.RspStatusDesc(status), rsp.SeqId)
-			c, ok := es.Requests[rsp.SeqId]
+			c, ok := r.Conn.UmbrellaRequests[rsp.SeqId] //es.Requests[rsp.SeqId]
+			ur := network.UmbrellaRequest{}
 			if status == utilities.RspStatusSuccess {
 				if ok {
-					c <- sn
+					ur.Success = true
+					ur.Sn = sn
+					//是否有借伞人， 有则判断是否押金足够
+					customerId, o := r.Conn.Borrowers[rsp.SeqId]
+					if o {
+						customer := &models.Customer{}
+						res := customer.CanBorrowUmbrella(customerId, sn)
+						ur.Success = res
+						if !res {
+							ur.Err = "押金不足"
+						}
+						delete(r.Conn.Borrowers, rsp.SeqId)
+					}
 				}
 			}else{
 				r.Packer = nil
-				if ok {
-					close(c)
-				}
 			}
 			if ok {
-				delete(es.Requests, rsp.SeqId)
+				c <- ur
+				delete(r.Conn.UmbrellaRequests, rsp.SeqId)
 				utilities.SysLog.Infof("删除等待序列，设备【%s】, 伞编号【%X】， 序列号【%d】", r.Equipment.Sn, rsp.UmbrellaSn, rsp.SeqId)
 			}
 		}else{
@@ -378,7 +442,7 @@ var EquipmentSrv *EquipmentService
 func init()  {
 	EquipmentSrv = &EquipmentService{
 		EquipmentConns: make(map[string]*network.Conn),
-		Requests: make(map[uint8]chan string),
+		//Requests: make(map[uint8]chan string),
 	}
 
 
