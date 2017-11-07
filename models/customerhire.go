@@ -121,6 +121,9 @@ func (m *CustomerHire) CalculateFee(){
 		if price.ID > 0 {
 			calAt := m.HireAt.Add(time.Duration(price.DelaySeconds) * time.Second)
 			hours := m.ReturnAt.Sub(calAt).Hours()
+			if hours < 0 {
+				hours = 0
+			}
 			var fee float64
 			if hours > float64(price.HireFreeHours) {
 				calHours := hours - float64(price.HireFreeHours)

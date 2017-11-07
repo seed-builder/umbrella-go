@@ -132,7 +132,7 @@ func NewConn(svr *TcpServer, conn net.Conn, typ Type) *Conn {
 func (c *Conn) Serve() {
 	defer func() {
 		if err := recover(); err != nil {
-			c.Panicf("客户端会话严重错误 %v: %v", c.rw.RemoteAddr(), err)
+			c.Errorf("客户端会话严重错误 %v: %v", c.rw.RemoteAddr(), err)
 		}
 	}()
 	defer c.Close()

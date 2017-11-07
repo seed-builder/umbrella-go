@@ -62,7 +62,10 @@ func (m *Umbrella) Check(umbrellaSn string) uint8 {
 	if m.Status == UmbrellaStatusExpired {
 		return utilities.RspStatusUmbrellaExpired
 	}
-	return utilities.RspStatusSuccess
+	if m.Status == UmbrellaStatusIn {
+		return utilities.RspStatusSuccess
+	}
+	return utilities.RspStatusUmbrellaStatusErr
 }
 
 //InEquipment 进入设备, 还伞
