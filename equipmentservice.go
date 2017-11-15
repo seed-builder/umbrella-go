@@ -277,6 +277,7 @@ func (es *EquipmentService) HandleTakeUmbrellaRsp(r *network.Response, p *networ
 						ur.Success = res
 						if !res {
 							ur.Err = "押金不足"
+							r.Packer = nil
 						}
 						delete(r.Conn.Borrowers, rsp.SeqId)
 					}
