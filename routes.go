@@ -51,7 +51,7 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 		c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
 	})
 
-	r.POST("/customer/:customerId/hire/:sn", func(c *gin.Context) { //utilities.VerifySign(),
+	r.POST("/customer/:customerId/hire/:sn", utilities.VerifySign(), func(c *gin.Context) { //
 		sn :=  c.Param("sn")
 		customerId := c.Param("customerId")
 		sign := c.Query("sign")
@@ -64,6 +64,10 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 			return
 		}
 		channelNum, seqId, err := EquipmentSrv.BorrowUmbrella(uint(cid), sn, 0)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
+			return
+		}
 		if channelNum == 0 && seqId == 0 {
 			c.JSON(http.StatusOK, gin.H{"success": false, "err": "无可用通道" })
 			return
@@ -98,7 +102,6 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 				}
 			}
 		}
-		c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
 	})
 
 	r.GET("/monitor", func(c *gin.Context) {

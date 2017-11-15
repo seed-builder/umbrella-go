@@ -125,6 +125,9 @@ func (es *EquipmentService) OpenChannel(equipmentSn string, channelNum uint8) (u
 func (es *EquipmentService) BorrowUmbrella(customerId uint, equipmentSn string, channelNum uint8) (uint8, uint8, error) {
 	conn, ok := es.EquipmentConns[equipmentSn]
 	if ok && conn.State > 0  {
+		if conn.ChannelInspectStatus == 0 {
+			return 0, 0, errors.New("设备正在检查,请稍后")
+		}
 		if channelNum == 0 {
 			channelNum = conn.Equipment.ChooseChannel()
 		}
@@ -331,6 +334,9 @@ func (es *EquipmentService) HandleChannelInspectRsp(r *network.Response, p *netw
 		if rsp.Channel < p.Conn.Equipment.Channels {
 			nextId := rsp.Channel + 1
 			p.Conn.ChannelInspect(nextId)
+		}else{
+			utilities.SysLog.Noticef("设备【%s】通道检查完毕",r.Equipment.Sn)
+			p.Conn.ChannelInspectStatus = 1
 		}
 	}
 	return true, nil

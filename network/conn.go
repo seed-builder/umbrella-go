@@ -37,6 +37,7 @@ const (
 	CONN_AUTHOK
 )
 
+
 //命令
 const (
 	CMD_ACTIVE_TEST uint8 = 0x01
@@ -82,7 +83,8 @@ type Conn struct {
 	Borrowers  map[uint8]uint
 	//出伞请求
 	UmbrellaRequests  map[uint8]chan UmbrellaRequest
-
+	//通道检查状态 0 - 未完 ， 1 - 完毕
+	ChannelInspectStatus uint8
 }
 
 func newSeqIdGenerator() (<-chan uint8, chan struct{}) {
@@ -373,6 +375,7 @@ func (c *Conn) SetChannelStatus(num uint8, status uint8){
 }
 
 func (c *Conn) ChannelInspect(channel uint8){
+	time.Sleep(1*time.Second)
 		req := &CmdChannelInspectReqPkt{
 			CmdData: CmdData{ Channel: channel, },
 		}
