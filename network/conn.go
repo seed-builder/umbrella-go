@@ -37,6 +37,20 @@ const (
 	CONN_AUTHOK
 )
 
+const(
+	//运行状态： 0-初始化
+	RUN_STATUS_INIT uint8 = iota
+	//等待
+	RUN_STATUS_WAITING
+	//通道检测
+	RUN_STATUS_CHANNEL_INSPECT
+	//借伞
+	RUN_STATUS_BORROWING
+	//还伞
+	RUN_STATUS_RESTORE
+
+)
+
 
 //命令
 const (
@@ -85,6 +99,8 @@ type Conn struct {
 	UmbrellaRequests  map[uint8]chan UmbrellaRequest
 	//通道检查状态 0 - 未完 ， 1 - 完毕
 	ChannelInspectStatus uint8
+	//运行状态
+	RunStatus uint8
 }
 
 func newSeqIdGenerator() (<-chan uint8, chan struct{}) {
@@ -375,7 +391,8 @@ func (c *Conn) SetChannelStatus(num uint8, status uint8){
 }
 
 func (c *Conn) ChannelInspect(channel uint8){
-	time.Sleep(1*time.Second)
+		c.RunStatus = RUN_STATUS_CHANNEL_INSPECT
+		time.Sleep(1*time.Second)
 		req := &CmdChannelInspectReqPkt{
 			CmdData: CmdData{ Channel: channel, },
 		}

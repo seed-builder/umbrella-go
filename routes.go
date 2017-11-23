@@ -58,13 +58,17 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 		fmt.Println("sign = ", sign)
 		cid, _ := strconv.ParseUint(customerId, 10, 32)
 
+		utilities.SysLog.Infof("收到客户【%s】在设备【%s】的借伞请求", customerId, sn)
+
 		conn , ok:= EquipmentSrv.EquipmentConns[sn]
 		if !ok || conn.State == network.CONN_CLOSED{
+			utilities.SysLog.Infof("客户【%s】在设备【%s】离线,无法完成借伞请求", customerId, sn)
 			c.JSON(http.StatusOK, gin.H{"success": false, "err": "设备离线" })
 			return
 		}
 		channelNum, seqId, err := EquipmentSrv.BorrowUmbrella(uint(cid), sn, 0)
 		if err != nil {
+			utilities.SysLog.Infof("客户【%s】在设备【%s】借伞请求错误：【%s】", customerId, sn, err.Error())
 			c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
 			return
 		}
@@ -76,7 +80,13 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 			chan_sn, ok := conn.UmbrellaRequests[seqId]
 			if ok {
 				umbrellaRequest := <- chan_sn
+				//设置设备当前状态为：等待
+				defer func() {
+					conn.RunStatus = network.RUN_STATUS_WAITING
+				}()
+
 				if !umbrellaRequest.Success {
+					utilities.SysLog.Infof("客户【%s】在设备【%s】借伞请求错误：【%s】", customerId, sn, umbrellaRequest.Err)
 					c.JSON(http.StatusOK, gin.H{"success": false, "err": umbrellaRequest.Err })
 					return
 				}
@@ -93,10 +103,12 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 					if hire != nil {
 						//hire.FreezeDepositFee(umbrella)
 						tx.Commit()
+						utilities.SysLog.Infof("客户【%s】在设备【%s】借伞请求成功", customerId, sn)
 						c.JSON(http.StatusOK, gin.H{"success": true, "hire_id": hire.ID, "channel": channelNum, "err": ""})
 						return
 					}else{
 						tx.Rollback()
+						utilities.SysLog.Infof("客户【%s】在设备【%s】借伞请求错误：【%s】", customerId, sn, err.Error())
 						c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
 					}
 				}

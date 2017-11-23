@@ -128,12 +128,18 @@ func (es *EquipmentService) BorrowUmbrella(customerId uint, equipmentSn string, 
 		if conn.ChannelInspectStatus == 0 {
 			return 0, 0, errors.New("设备正在检查,请稍后")
 		}
+		if conn.RunStatus > network.RUN_STATUS_WAITING {
+			return 0, 0, errors.New("设备忙,请稍后")
+		}
 		if channelNum == 0 {
 			channelNum = conn.Equipment.ChooseChannel()
 		}
 		if channelNum == 0 {
 			return 0 , 0, nil
 		}
+		//设置设备当前状态为：借伞
+		conn.RunStatus = network.RUN_STATUS_BORROWING
+
 		var seqId uint8
 		req := &network.CmdTakeUmbrellaReqPkt{}
 		req.Channel = channelNum
@@ -145,17 +151,17 @@ func (es *EquipmentService) BorrowUmbrella(customerId uint, equipmentSn string, 
 			return 0, 0, err
 		} else {
 			//重发
-			go func() {
-				time.Sleep(time.Duration(utilities.SysConfig.TcpResendInterval) * time.Second)
-				_, ok := conn.UmbrellaRequests[seqId]
-				if ok {
-					utilities.SysLog.Infof("重发设备【%s】开启通道【%d】取伞命令 序列号【%d】!", equipmentSn, channelNum, seqId)
-					conn.SendPkt(req, seqId)
-				}
-			}()
+			//go func() {
+			//	time.Sleep(time.Duration(utilities.SysConfig.TcpResendInterval) * time.Second)
+			//	_, ok := conn.UmbrellaRequests[seqId]
+			//	if ok {
+			//		utilities.SysLog.Infof("重发设备【%s】开启通道【%d】取伞命令 序列号【%d】!", equipmentSn, channelNum, seqId)
+			//		conn.SendPkt(req, seqId)
+			//	}
+			//}()
 			//超时
 			go func() {
-				time.Sleep(time.Duration(utilities.SysConfig.TcpResendInterval * 2) * time.Second)
+				time.Sleep(time.Duration(utilities.SysConfig.TcpResendInterval * 1) * time.Second)
 				c, ok :=  conn.UmbrellaRequests[seqId]
 				if ok {
 					utilities.SysLog.Warningf("设备【%s】开启通道【%d】取伞命令超时 序列号【%d】!", equipmentSn, channelNum, seqId)
@@ -247,11 +253,16 @@ func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Pac
 	utilities.SysLog.Noticef("收到设备【%s】还伞命令,通道【%d】,伞编号【%X】, 序列号【%d】", r.Equipment.Sn,
 		req.Channel, req.UmbrellaSn, req.SeqId)
 	resp := r.Packer.(*network.CmdUmbrellaInRspPkt)
+	//设置设备当前状态为：还伞
+	p.Conn.RunStatus = network.RUN_STATUS_RESTORE
 
 	umbrella := &models.Umbrella{}
 	sn := fmt.Sprintf("%X", req.UmbrellaSn)
 	resp.Status = umbrella.InEquipment(r.Equipment, sn, req.Channel)
 	p.Equipment.SetChannelStatus(req.Channel, utilities.RspStatusSuccess)
+	//设置设备当前状态为：等待
+	p.Conn.RunStatus = network.RUN_STATUS_WAITING
+
 	return true, nil
 
 }
@@ -337,6 +348,7 @@ func (es *EquipmentService) HandleChannelInspectRsp(r *network.Response, p *netw
 		}else{
 			utilities.SysLog.Noticef("设备【%s】通道检查完毕",r.Equipment.Sn)
 			p.Conn.ChannelInspectStatus = 1
+			p.Conn.RunStatus = network.RUN_STATUS_WAITING
 		}
 	}
 	return true, nil
@@ -453,12 +465,6 @@ func init()  {
 		EquipmentConns: make(map[string]*network.Conn),
 		//Requests: make(map[uint8]chan string),
 	}
-
-
-
-
-
-
 }
 
 
