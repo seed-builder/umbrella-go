@@ -83,7 +83,7 @@ func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelN
 		if m.EquipmentChannelNum == channelNum {
 			return utilities.RspStatusSuccess
 		}else{
-			go equipment.OutChannel(m.EquipmentChannelNum, nil)
+			equipment.OutChannel(m.EquipmentChannelNum, nil)
 		}
 	}
 	m.Entity = m
@@ -97,10 +97,10 @@ func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelN
 	}else {
 		m.Status = UmbrellaStatusIn
 	}
-	go m.Save()
+	m.Save()
 
 	if m.Status == UmbrellaStatusIn {
-		go equipment.InChannel(channelNum)
+		equipment.InChannel(channelNum)
 		return utilities.RspStatusSuccess
 	}else{
 		return utilities.RspStatusUmbrellaExpired
