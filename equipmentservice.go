@@ -207,6 +207,9 @@ func (es *EquipmentService) HandleActiveTestRsp(r *network.Response, p *network.
 	rsp, ok := r.Packet.Packer.(*network.CmdActiveTestRspPkt)
 	if ok {
 		atomic.AddInt32(&p.Conn.Counter, -1)
+		if r.Conn.State == network.CONN_AUTHOK {
+			r.Conn.Equipment.Online(r.Conn.Ip)
+		}
 		if rsp.Channel > 0 && rsp.Status == utilities.RspStatusChannelErrLock {
 			es.RescueChannel(r, p, rsp.Channel)
 		}
