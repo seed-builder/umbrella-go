@@ -70,6 +70,7 @@ func (m *Umbrella) Check(umbrellaSn string) uint8 {
 
 //InEquipment 进入设备, 还伞
 func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelNum uint8)  uint8 {
+	//
 	m.Query().First(m, "sn = ?", strings.ToUpper(umbrellaSn))
 	if m.ID == 0 {
 		utilities.SysLog.Warningf("设备【%s】非法伞编号【%s】,禁止进入通道【%d】", equipment.Sn, umbrellaSn, channelNum)
@@ -86,6 +87,8 @@ func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelN
 			equipment.OutChannel(m.EquipmentChannelNum, nil)
 		}
 	}
+	equipment.InChannel(channelNum)
+	//
 	m.Entity = m
 	m.EquipmentId = equipment.ID
 	m.EquipmentChannelNum = channelNum
@@ -100,7 +103,6 @@ func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelN
 	m.Save()
 
 	if m.Status == UmbrellaStatusIn {
-		equipment.InChannel(channelNum)
 		return utilities.RspStatusSuccess
 	}else{
 		return utilities.RspStatusUmbrellaExpired

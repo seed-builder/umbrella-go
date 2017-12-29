@@ -389,10 +389,17 @@ func (es *EquipmentService) HandleUmbrellaInspect(r *network.Response, p *networ
 		resp := r.Packer.(*network.CmdUmbrellaInspectRspPkt)
 		utilities.SysLog.Noticef("收到设备【%s】伞SN检查命令, 通道【%d】,伞编号【%X】, 序列号【%d】", r.Equipment.Sn,
 			req.Channel, req.UmbrellaSn, req.SeqId)
+		//设置设备当前状态为：还伞
+		p.Conn.RunStatus = network.RUN_STATUS_RESTORE
 
 		umbrella := &models.Umbrella{}
 		sn := fmt.Sprintf("%X", req.UmbrellaSn)
 		status := umbrella.InEquipment(r.Equipment, sn, req.Channel)
+
+		p.Equipment.SetChannelStatus(req.Channel, utilities.RspStatusSuccess)
+		//设置设备当前状态为：等待
+		p.Conn.RunStatus = network.RUN_STATUS_WAITING
+
 		if status == utilities.RspStatusSuccess{
 			resp.Status = utilities.RspStatusUmbrellaReturned
 		}else{
