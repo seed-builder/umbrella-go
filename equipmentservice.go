@@ -275,12 +275,13 @@ func (es *EquipmentService) HandleTakeUmbrellaRsp(r *network.Response, p *networ
 	rsp, ok := p.Packer.(*network.CmdTakeUmbrellaRspPkt)
 	if ok {
 		utilities.SysLog.Noticef("收到设备【%s】设备取伞反馈,伞编号【%X】,状态【%s】,序列号【%d】",r.Equipment.Sn, rsp.UmbrellaSn, utilities.RspStatusDesc(rsp.Status), rsp.SeqId)
+		c, ok := r.Conn.UmbrellaRequests[rsp.SeqId] //es.Requests[rsp.SeqId]
 		if rsp.Status == utilities.RspStatusSuccess {
 			umbrella := &models.Umbrella{}
 			sn := fmt.Sprintf("%X", rsp.UmbrellaSn)
 			status := umbrella.Check(sn)
 			utilities.SysLog.Noticef("设备【%s】取伞反馈,伞编号【%s】,查询出的该伞状态是【%s】,序列号【%d】",r.Equipment.Sn, sn, utilities.RspStatusDesc(status), rsp.SeqId)
-			c, ok := r.Conn.UmbrellaRequests[rsp.SeqId] //es.Requests[rsp.SeqId]
+
 			ur := network.UmbrellaRequest{}
 			if status == utilities.RspStatusSuccess {
 				if ok {
@@ -309,6 +310,10 @@ func (es *EquipmentService) HandleTakeUmbrellaRsp(r *network.Response, p *networ
 				utilities.SysLog.Infof("删除等待序列，设备【%s】, 伞编号【%X】， 序列号【%d】", r.Equipment.Sn, rsp.UmbrellaSn, rsp.SeqId)
 			}
 		}else{
+			if ok {
+				c <- network.UmbrellaRequest{Success:false, Err: utilities.RspStatusDesc(rsp.Status) }
+				delete(r.Conn.UmbrellaRequests, rsp.SeqId)
+			}
 			r.Packer = nil
 			return es.HandleException(r, p, r.SeqId, rsp.Status, rsp.Channel)
 		}
