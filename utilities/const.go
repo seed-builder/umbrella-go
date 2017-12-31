@@ -59,7 +59,7 @@ func RspStatusDesc(status uint8) string{
 	case RspStatusChannelBusy:
 		desc = "通道忙（有指令未完成）"
 	case RspStatusTimeout:
-		desc = "超时"
+		desc = "借伞超时，请重新扫码"
 	case RspStatusUserWrong:
 		desc = "用户名错误"
 	case RspStatusGprsErr:
@@ -97,7 +97,7 @@ func RspStatusDesc(status uint8) string{
 	case RspStatusChannelErrLock:
 		desc = "通道锁异常"
 	case RspStatusUmbrellaStatusErr:
-		desc = "伞状态异常"
+		desc = "伞状态异常，请重新扫码"
 	}
 	return desc
 }

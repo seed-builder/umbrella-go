@@ -129,7 +129,7 @@ func (es *EquipmentService) BorrowUmbrella(customerId uint, equipmentSn string, 
 			return 0, 0, errors.New("设备正在检查,请稍后")
 		}
 		if conn.RunStatus > network.RUN_STATUS_WAITING {
-			return 0, 0, errors.New("设备忙,请稍后")
+			return 0, 0, errors.New("设备忙，请重新扫码")
 		}
 		if channelNum == 0 {
 			channelNum = conn.Equipment.ChooseChannel()

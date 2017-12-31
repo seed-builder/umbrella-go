@@ -123,18 +123,13 @@ func (m *Equipment)SetChannelStatus(num uint8, status uint8) bool {
 		rescue := false
 		n.Status = status
 		if status == utilities.RspStatusChannelTimeout || status ==  utilities.RspStatusTimeout {
-			n.Valid = false
-			msg := &Message{}
-			msg.AddChannelError(m.Sn, m.ID, m.SiteId, uint(num))
+			n.RescueTimes ++
+			if n.RescueTimes >= 3 {
+				n.Valid = false
+			}
 		} else if status == utilities.RspStatusChannelErrLock {
 			rescue = true
 			n.Valid = false
-			n.RescueTimes ++
-			if n.RescueTimes > 3 {
-				msg := &Message{}
-				msg.AddChannelError(m.Sn, m.ID, m.SiteId, uint(num))
-				rescue = false
-			}
 		} else {
 			n.Valid = true
 			n.RescueTimes = 0
