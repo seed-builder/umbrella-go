@@ -51,6 +51,25 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 		c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
 	})
 
+	r.POST("/equipment/:sn/set-channel/:num", func(c *gin.Context) {
+		sn :=  c.Param("sn")
+		num :=  c.Param("num")
+		validStr := c.PostForm("valid")
+		cn, er := strconv.Atoi(num)
+		valid, er := strconv.ParseBool(validStr)
+		if er != nil{
+			cn = 0
+		}
+		_ , ok:= EquipmentSrv.EquipmentConns[sn]
+		if !ok {
+			c.JSON(http.StatusOK, gin.H{"success": false, "err": "设备离线" })
+			return
+		}
+		EquipmentSrv.SetChannel(sn, uint8(cn), valid)
+
+		c.JSON(http.StatusOK, gin.H{"success": true, "err": nil })
+	})
+
 	r.POST("/customer/:customerId/hire/:sn", utilities.VerifySign(), func(c *gin.Context) { //
 		sn :=  c.Param("sn")
 		customerId := c.Param("customerId")

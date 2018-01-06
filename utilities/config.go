@@ -7,6 +7,7 @@ import (
 )
 
 type Config struct {
+	HttpBaseUrl string `yaml:"http_base_url"`
 	HttpPort string `yaml:"http_port"`
 	TcpIp string `yaml:"tcp_ip"`
 	TcpPort string `yaml:"tcp_port"`

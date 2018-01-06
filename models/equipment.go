@@ -25,6 +25,7 @@ type Equipment struct {
 	Ip string
 	Status int32
 	Channels uint8
+	ServerHttpBase string
 	ChannelCache map[uint8]*Channel `gorm:"-"`
 	UsedChannelNum uint8 `gorm:"-"`
 }
@@ -56,14 +57,21 @@ func (m *Equipment) Query() *gorm.DB{
 }
 
 func (m *Equipment) InitChannel() {
-	m.ChannelCache = make(map[uint8]*Channel, m.Channels)
+	var channels []Channel
+	channel := &Channel{}
+	channel.Query().Find(&channels, "equipment_id = ?", m.ID)
+	m.ChannelCache = make(map[uint8]*Channel, len(channels))
+
 	umbrella := &Umbrella{}
 	var have int32
-	for i := uint8(1); i <= m.Channels; i ++ {
+	for i := 0; i < len(channels); i ++ {
 		var count uint8
-		umbrella.Query().Where("status=2 and equipment_id = ? and equipment_channel_num = ?", m.ID, i).Count(&count)
-		m.ChannelCache[i] = &Channel{ Id: i, Umbrellas: count, }
+		c := channels[i]
+		umbrella.Query().Where("status=2 and equipment_id = ? and equipment_channel_num = ?", m.ID, c.Num).Count(&count)
+		c.Umbrellas = count
+		m.ChannelCache[c.Num] = &c //&Channel{ Num: , Umbrellas: count, }
 		have =  have + int32(count)
+		go c.UpdateUmbrellas()
 	}
 	m.Have = have
 	utilities.MyDB.Model(m).Update("have", have)
@@ -88,6 +96,8 @@ func (m *Equipment) ChooseChannel() uint8 {
 func (m *Equipment) InChannel(channelNum uint8){
 	n := m.ChannelCache[channelNum]
 	n.Umbrellas = n.Umbrellas + 1
+	go n.UpdateUmbrellas()
+
 	m.UsedChannelNum = channelNum
 	m.Have = m.Have + 1
 	utilities.MyDB.Model(m).Update("have", m.Have )
@@ -97,6 +107,8 @@ func (m *Equipment) OutChannel(channelNum uint8, db *gorm.DB) error {
 	n := m.ChannelCache[channelNum]
 	if n.Umbrellas > 0 {
 		n.Umbrellas = n.Umbrellas - 1
+		go n.UpdateUmbrellas()
+
 		m.Have = m.Have - 1
 		if db != nil {
 			return db.Model(m).Update("have", m.Have).Error
@@ -109,7 +121,7 @@ func (m *Equipment) OutChannel(channelNum uint8, db *gorm.DB) error {
 
 func (m *Equipment) Online(ip string){
 	m.Status = EquipmentStatusOnline
-	utilities.MyDB.Model(m).Updates(map[string]interface{}{"status":m.Status, "ip": ip})
+	utilities.MyDB.Model(m).Updates(map[string]interface{}{"status":m.Status, "ip": ip, "server_http_base": m.ServerHttpBase})
 }
 
 func (m *Equipment) Offline(){
@@ -121,7 +133,8 @@ func (m *Equipment)SetChannelStatus(num uint8, status uint8) bool {
 	n, ok := m.ChannelCache[num]
 	if ok {
 		rescue := false
-		n.Status = status
+		n.LockStatus = status
+
 		if status == utilities.RspStatusChannelTimeout || status ==  utilities.RspStatusTimeout {
 			n.RescueTimes ++
 			if n.RescueTimes >= 3 {
@@ -134,6 +147,7 @@ func (m *Equipment)SetChannelStatus(num uint8, status uint8) bool {
 			n.Valid = true
 			n.RescueTimes = 0
 		}
+		go n.UpdateInfo()
 		return rescue
 	}
 	return false

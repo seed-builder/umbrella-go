@@ -121,6 +121,17 @@ func (es *EquipmentService) OpenChannel(equipmentSn string, channelNum uint8) (u
 	}
 }
 
+func (es *EquipmentService) SetChannel(equipmentSn string, channelNum uint8, valid bool) {
+	conn, ok := es.EquipmentConns[equipmentSn]
+	if ok && conn.State > 0 {
+		if valid {
+			conn.SetChannelStatus(channelNum, utilities.RspStatusChannelMiddle)
+		} else {
+			conn.SetChannelStatus(channelNum, utilities.RspStatusChannelErrLock)
+		}
+	}
+}
+
 //BorrowUmbrella 从设备借伞
 func (es *EquipmentService) BorrowUmbrella(customerId uint, equipmentSn string, channelNum uint8) (uint8, uint8, error) {
 	conn, ok := es.EquipmentConns[equipmentSn]
@@ -232,6 +243,7 @@ func (es *EquipmentService) HandleConnect(r *network.Response, p *network.Packet
 		eq := &models.Equipment{}
 		eq.Query().First(&eq, "sn = ?", req.EquipmentSn)
 		if eq.ID > 0 {
+			eq.ServerHttpBase = utilities.SysConfig.HttpBaseUrl
 			eq.InitChannel()
 			eq.Online(r.Conn.Ip)
 			r.Packet.Conn.SetState( network.CONN_AUTHOK )

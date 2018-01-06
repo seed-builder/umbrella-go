@@ -1,13 +1,15 @@
+http_base_url: http://127.0.0.1:4000
 http_port: 4000
 tcp_ip: 127.0.0.1
-tcp_port: 8080
-tcp_test_timeout: 180
+tcp_port: 7777
+tcp_test_timeout: 15
 tcp_test_max: 3
+tcp_resend_interval: 30
 debug: true
 db_dialect: mysql
 db_server: 127.0.0.1:3306
 db_user: root
 db_password:
 db_database: umbrella
-salt: sfadfasdf
+salt: kbLiBsZUsF6br2FyZ9UfRv74UU2ObNOj
 notice_host: http://localhost
