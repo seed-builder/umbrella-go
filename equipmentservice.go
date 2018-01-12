@@ -124,11 +124,13 @@ func (es *EquipmentService) OpenChannel(equipmentSn string, channelNum uint8) (u
 func (es *EquipmentService) SetChannel(equipmentSn string, channelNum uint8, valid bool) {
 	conn, ok := es.EquipmentConns[equipmentSn]
 	if ok && conn.State > 0 {
-		if valid {
-			conn.SetChannelStatus(channelNum, utilities.RspStatusChannelMiddle)
-		} else {
-			conn.SetChannelStatus(channelNum, utilities.RspStatusChannelErrLock)
-		}
+		conn.SetChannelValid(channelNum, valid)
+		//if valid {
+		//	conn.SetChannelStatus(channelNum, utilities.RspStatusChannelMiddle)
+		//} else {
+		//	conn.SetChannelStatus(channelNum, utilities.RspStatusChannelErrLock)
+		//}
+
 	}
 }
 
@@ -268,18 +270,23 @@ func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Pac
 	utilities.SysLog.Noticef("收到设备【%s】还伞命令,通道【%d】,伞编号【%X】, 序列号【%d】", r.Equipment.Sn,
 		req.Channel, req.UmbrellaSn, req.SeqId)
 	resp := r.Packer.(*network.CmdUmbrellaInRspPkt)
-	//设置设备当前状态为：还伞
-	p.Conn.RunStatus = network.RUN_STATUS_RESTORE
+	// 检查通道是否有效
+	if r.Equipment.CheckValid(req.Channel) {
+		//设置设备当前状态为：还伞
+		p.Conn.RunStatus = network.RUN_STATUS_RESTORE
 
-	umbrella := &models.Umbrella{}
-	sn := fmt.Sprintf("%X", req.UmbrellaSn)
-	resp.Status = umbrella.InEquipment(r.Equipment, sn, req.Channel)
-	p.Equipment.SetChannelStatus(req.Channel, utilities.RspStatusSuccess)
-	//设置设备当前状态为：等待
-	p.Conn.RunStatus = network.RUN_STATUS_WAITING
-
+		umbrella := &models.Umbrella{}
+		sn := fmt.Sprintf("%X", req.UmbrellaSn)
+		resp.Status = umbrella.InEquipment(r.Equipment, sn, req.Channel)
+		p.Equipment.SetChannelStatus(req.Channel, utilities.RspStatusSuccess)
+		//设置设备当前状态为：等待
+		p.Conn.RunStatus = network.RUN_STATUS_WAITING
+	}else{
+		utilities.SysLog.Noticef("检测设备【%s】通道【%d】【无效】无法还伞, 序列号【%d】", r.Equipment.Sn,
+			req.Channel, req.SeqId)
+		resp.Status = utilities.RspStatusChannelErrLock
+	}
 	return true, nil
-
 }
 
 //HandleTakeUmbrella: 通道取伞， 成功则发送出伞命令
@@ -401,21 +408,28 @@ func (es *EquipmentService) HandleUmbrellaInspect(r *network.Response, p *networ
 		resp := r.Packer.(*network.CmdUmbrellaInspectRspPkt)
 		utilities.SysLog.Noticef("收到设备【%s】伞SN检查命令, 通道【%d】,伞编号【%X】, 序列号【%d】", r.Equipment.Sn,
 			req.Channel, req.UmbrellaSn, req.SeqId)
-		//设置设备当前状态为：还伞
-		p.Conn.RunStatus = network.RUN_STATUS_RESTORE
+		// 检查通道是否有效
+		if r.Equipment.CheckValid(req.Channel) {
+			//设置设备当前状态为：还伞
+			p.Conn.RunStatus = network.RUN_STATUS_RESTORE
 
-		umbrella := &models.Umbrella{}
-		sn := fmt.Sprintf("%X", req.UmbrellaSn)
-		status := umbrella.InEquipment(r.Equipment, sn, req.Channel)
+			umbrella := &models.Umbrella{}
+			sn := fmt.Sprintf("%X", req.UmbrellaSn)
+			status := umbrella.InEquipment(r.Equipment, sn, req.Channel)
 
-		p.Equipment.SetChannelStatus(req.Channel, utilities.RspStatusSuccess)
-		//设置设备当前状态为：等待
-		p.Conn.RunStatus = network.RUN_STATUS_WAITING
+			p.Equipment.SetChannelStatus(req.Channel, utilities.RspStatusSuccess)
+			//设置设备当前状态为：等待
+			p.Conn.RunStatus = network.RUN_STATUS_WAITING
 
-		if status == utilities.RspStatusSuccess{
-			resp.Status = utilities.RspStatusUmbrellaReturned
+			if status == utilities.RspStatusSuccess {
+				resp.Status = utilities.RspStatusUmbrellaReturned
+			} else {
+				resp.Status = status
+			}
 		}else{
-			resp.Status = status
+			utilities.SysLog.Noticef("检测设备【%s】通道【%d】【无效】无法还伞, 序列号【%d】", r.Equipment.Sn,
+				req.Channel, req.SeqId)
+			resp.Status = utilities.RspStatusChannelErrLock
 		}
 	}
 	return true, nil

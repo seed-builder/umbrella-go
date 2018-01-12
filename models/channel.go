@@ -37,5 +37,6 @@ func (m *Channel) UpdateUmbrellas()  {
 }
 
 func (m *Channel) UpdateInfo()  {
-	utilities.MyDB.Model(m).Updates(map[string]interface{} {"lock_status": m.LockStatus, "rescue_times": m.RescueTimes, "valid": m.Valid})
+	utilities.MyDB.Model(m).Updates(map[string]interface{} {"lock_status": m.LockStatus, "rescue_times": m.RescueTimes})
 }
+

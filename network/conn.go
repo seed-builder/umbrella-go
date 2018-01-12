@@ -386,8 +386,8 @@ func (c *Conn) SetEquipment(equipment *models.Equipment){
 	}()
 }
 
-func (c *Conn) SetChannelStatus(num uint8, status uint8){
-	c.Equipment.SetChannelStatus(num, status)
+func (c *Conn) SetChannelValid(num uint8, valid bool){
+	c.Equipment.SetChannelValid(num, valid)
 }
 
 func (c *Conn) ChannelInspect(channel uint8){

@@ -91,6 +91,7 @@ func (m *Umbrella) InEquipment(equipment *Equipment, umbrellaSn string, channelN
 	//
 	m.Entity = m
 	m.EquipmentId = equipment.ID
+	m.SiteId = equipment.SiteId
 	m.EquipmentChannelNum = channelNum
 	//m.Status = UmbrellaStatusIn
 

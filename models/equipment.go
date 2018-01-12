@@ -82,7 +82,7 @@ func (m *Equipment) ChooseChannel() uint8 {
 	var len uint8
 	channelNum := uint8(0)
 	for n, l :=  range m.ChannelCache {
-		if n != m.UsedChannelNum && l.Valid && l.Umbrellas > len {
+		if n != m.UsedChannelNum && l.Umbrellas > len && m.CheckIsUseful(n) {
 			channelNum = n
 			len = l.Umbrellas
 		}
@@ -132,24 +132,39 @@ func (m *Equipment) Offline(){
 func (m *Equipment)SetChannelStatus(num uint8, status uint8) bool {
 	n, ok := m.ChannelCache[num]
 	if ok {
-		rescue := false
-		n.LockStatus = status
+		//rescue := false
+		//n.LockStatus = status
 
-		if status == utilities.RspStatusChannelTimeout || status ==  utilities.RspStatusTimeout {
+		if status == utilities.RspStatusChannelTimeout || status ==  utilities.RspStatusTimeout || status == utilities.RspStatusChannelErrLock {
 			n.RescueTimes ++
 			if n.RescueTimes >= 3 {
-				n.Valid = false
+				n.LockStatus = status
 			}
-		} else if status == utilities.RspStatusChannelErrLock {
-			rescue = true
-			n.Valid = false
 		} else {
-			n.Valid = true
+			//n.Valid = true
+			n.LockStatus = status
 			n.RescueTimes = 0
 		}
 		go n.UpdateInfo()
-		return rescue
 	}
 	return false
 }
 
+func (m *Equipment)SetChannelValid(num uint8, valid bool) {
+	n, ok := m.ChannelCache[num]
+	if ok {
+		n.Valid = valid
+	}
+}
+
+// 检测是否可用
+func (m *Equipment) CheckIsUseful(channelNum uint8) bool {
+	n := m.ChannelCache[channelNum]
+	return n.Valid && n.LockStatus > utilities.RspStatusChannelTimeout && n.LockStatus < utilities.RspStatusChannelErrLock
+}
+
+// 检查是否有效
+func (m *Equipment) CheckValid(channelNum uint8) bool {
+	n := m.ChannelCache[channelNum]
+	return n.Valid
+}
