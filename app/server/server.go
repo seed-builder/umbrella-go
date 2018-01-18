@@ -10,6 +10,7 @@ import (
 	"os"
 	"bufio"
 	"strings"
+	"runtime"
 )
 
 func restApi()  {
@@ -32,7 +33,6 @@ func restApi()  {
 	s.ListenAndServe()
 
 }
-
 
 func equipmentSrv(){
 	//defer wg.Done()
@@ -78,4 +78,8 @@ func main() {
 	if err := scanner.Err(); err != nil {
 		utilities.SysLog.Error("命令错误: ", err)
 	}
+}
+
+func init(){
+	runtime.GOMAXPROCS(runtime.NumCPU())
 }

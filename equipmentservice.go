@@ -104,7 +104,7 @@ func (es *EquipmentService) OpenChannel(equipmentSn string, channelNum uint8) (u
 				c, ok :=  conn.UmbrellaRequests[seqId]
 				if ok {
 					utilities.SysLog.Warningf("设备【%s】开启通道【%d】取伞命令超时 序列号【%d】!", equipmentSn, channelNum, seqId)
-					c <- network.UmbrellaRequest{Success:false, Err: "超时"}
+					c <- network.UmbrellaRequest{Success:false, Err: "借伞超时, 请重新扫码"}
 					delete( conn.UmbrellaRequests, seqId )
 				}
 			}()
@@ -178,7 +178,7 @@ func (es *EquipmentService) BorrowUmbrella(customerId uint, equipmentSn string, 
 				c, ok :=  conn.UmbrellaRequests[seqId]
 				if ok {
 					utilities.SysLog.Warningf("设备【%s】开启通道【%d】取伞命令超时 序列号【%d】!", equipmentSn, channelNum, seqId)
-					c <- network.UmbrellaRequest{Success:false, Err: "超时"}
+					c <- network.UmbrellaRequest{Success:false, Err: "借伞超时, 请重新扫码"}
 					delete( conn.UmbrellaRequests, seqId )
 				}
 			}()
