@@ -153,6 +153,7 @@ func (m *Equipment)SetChannelStatus(num uint8, status uint8) bool {
 func (m *Equipment)SetChannelValid(num uint8, valid bool) {
 	n, ok := m.ChannelCache[num]
 	if ok {
+		n.LockStatus = utilities.RspStatusChannelBorrow
 		n.Valid = valid
 	}
 }
