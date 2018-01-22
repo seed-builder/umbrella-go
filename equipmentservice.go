@@ -278,7 +278,7 @@ func (es *EquipmentService) HandleUmbrellaIn(r *network.Response, p *network.Pac
 		umbrella := &models.Umbrella{}
 		sn := fmt.Sprintf("%X", req.UmbrellaSn)
 		resp.Status = umbrella.InEquipment(r.Equipment, sn, req.Channel)
-		p.Equipment.SetChannelStatus(req.Channel, utilities.RspStatusSuccess)
+		p.Equipment.SetChannelStatus(req.Channel, utilities.RspStatusChannelReturn)
 		//设置设备当前状态为：等待
 		p.Conn.RunStatus = network.RUN_STATUS_WAITING
 	}else{
@@ -417,7 +417,7 @@ func (es *EquipmentService) HandleUmbrellaInspect(r *network.Response, p *networ
 			sn := fmt.Sprintf("%X", req.UmbrellaSn)
 			status := umbrella.InEquipment(r.Equipment, sn, req.Channel)
 
-			p.Equipment.SetChannelStatus(req.Channel, utilities.RspStatusSuccess)
+			p.Equipment.SetChannelStatus(req.Channel, utilities.RspStatusChannelBorrow)
 			//设置设备当前状态为：等待
 			p.Conn.RunStatus = network.RUN_STATUS_WAITING
 

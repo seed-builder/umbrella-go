@@ -87,7 +87,7 @@ func (m *Equipment) ChooseChannel() uint8 {
 			len = l.Umbrellas
 		}
 	}
-	if len == 0 && m.UsedChannelNum > 0 && m.ChannelCache[m.UsedChannelNum].Umbrellas > len {
+	if len == 0 && m.UsedChannelNum > 0 && m.CheckIsUseful(m.UsedChannelNum) {
 		channelNum = m.UsedChannelNum
 	}
 	return channelNum
