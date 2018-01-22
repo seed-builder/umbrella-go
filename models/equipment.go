@@ -131,7 +131,7 @@ func (m *Equipment) Offline(){
 
 func (m *Equipment)SetChannelStatus(num uint8, status uint8) bool {
 	n, ok := m.ChannelCache[num]
-	if ok {
+	if ok && n.Valid {
 		//rescue := false
 		//n.LockStatus = status
 
