@@ -81,7 +81,7 @@ func RspStatusDesc(status uint8) string{
 	case RspStatusDataErr:
 		desc = "数据错"
 	case RspStatusChannelTimeout:
-		desc = "通道超时"
+		desc = "通道超时，请重新扫码"
 	case RspStatusChannelMiddle:
 		desc = "通道锁状态-中间"
 	case RspStatusChannelBorrow:
