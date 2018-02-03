@@ -26,6 +26,8 @@ type Equipment struct {
 	Status int32
 	Channels uint8
 	ServerHttpBase string
+	PartnerId uint
+	PriceId uint
 	ChannelCache map[uint8]*Channel `gorm:"-"`
 	UsedChannelNum uint8 `gorm:"-"`
 }
@@ -158,7 +160,7 @@ func (m *Equipment)SetChannelValid(num uint8, valid bool) {
 	}
 }
 
-// 检测是否可用
+// 检测通道是否可用
 func (m *Equipment) CheckIsUseful(channelNum uint8) bool {
 	n := m.ChannelCache[channelNum]
 	return n.Valid && n.LockStatus > utilities.RspStatusChannelTimeout && n.LockStatus < utilities.RspStatusChannelErrLock

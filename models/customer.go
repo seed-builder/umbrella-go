@@ -49,3 +49,15 @@ func (m *Customer) CanBorrowUmbrella(customerId uint, sn string) bool {
 	}
 	return price.DepositCash <= account.Deposit
 }
+
+func (m *Customer) CanBorrowFromEquipment(customerId uint, priceId uint) bool {
+	account := &CustomerAccount{}
+	account.Query().First(account,"customer_id = ?", customerId)
+	price := &Price{}
+	if priceId == 0 {
+		price.Query().First(price, "is_default = ?", 1)
+	}else{
+		price.Query().First(price, priceId)
+	}
+	return price.DepositCash <= account.Deposit
+}

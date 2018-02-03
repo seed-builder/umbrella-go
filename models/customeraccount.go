@@ -22,7 +22,7 @@ func (CustomerAccount) TableName() string {
 	return "customer_accounts"
 }
 
-func (m *CustomerAccount) Query() *gorm.DB{
+func (m *CustomerAccount) Query() *gorm.DB {
 	if m.db == nil{
 		m.db = utilities.MyDB
 	}

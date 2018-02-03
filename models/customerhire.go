@@ -81,13 +81,13 @@ func (hire *CustomerHire) UmbrellaReturn(umbrellaId uint, equipmentId uint, site
 }
 
 //CalculateHireFee 冻结押金费用
-func (m *CustomerHire) FreezeDepositFee(umbrella *Umbrella){
+func (m *CustomerHire) FreezeDepositFee(priceId uint){
 	price := &Price{}
 	price.InitDb(m.db)
-	if umbrella.PriceId == 0 {
+	if priceId == 0 {
 		price.Query().First(price, "is_default = ?", 1)
 	}else{
-		price.Query().First(price, umbrella.PriceId)
+		price.Query().First(price, priceId)
 	}
 	if price.ID > 0 {
 		m.DepositAmt = price.DepositCash
@@ -197,7 +197,7 @@ func CreateCustomerHire(equipment *Equipment, umbrella *Umbrella, customerId uin
 		entity.HireEquipmentId = equipment.ID
 		entity.HireSiteId = equipment.SiteId
 		entity.Status = UmbrellaHireStatusNormal
-		entity.FreezeDepositFee(umbrella)
+		entity.FreezeDepositFee(equipment.PriceId)
 		entity.Save()
 		return entity, nil
 	}else{

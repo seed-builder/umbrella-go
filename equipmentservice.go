@@ -183,7 +183,7 @@ func (es *EquipmentService) BorrowUmbrella(customerId uint, equipmentSn string, 
 				}
 			}()
 			//记录借伞人ID
-			conn.Borrowers[seqId] = customerId
+			//conn.Borrowers[seqId] = customerId
 			_, ok := conn.UmbrellaRequests[seqId]
 			if !ok {
 				conn.UmbrellaRequests[seqId] = make(chan network.UmbrellaRequest)
@@ -303,22 +303,8 @@ func (es *EquipmentService) HandleTakeUmbrellaRsp(r *network.Response, p *networ
 
 			ur := network.UmbrellaRequest{}
 			if status == utilities.RspStatusSuccess {
-				if ok {
-					ur.Success = true
-					ur.Sn = sn
-					//是否有借伞人， 有则判断是否押金足够
-					customerId, o := r.Conn.Borrowers[rsp.SeqId]
-					if o {
-						customer := &models.Customer{}
-						res := customer.CanBorrowUmbrella(customerId, sn)
-						ur.Success = res
-						if !res {
-							ur.Err = "押金不足"
-							r.Packer = nil
-						}
-						delete(r.Conn.Borrowers, rsp.SeqId)
-					}
-				}
+				ur.Success = true
+				ur.Sn = sn
 			}else{
 				r.Packer = nil
 				ur.Err = utilities.RspStatusDesc(status)

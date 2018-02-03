@@ -80,9 +80,17 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 		utilities.SysLog.Infof("收到客户【%s】在设备【%s】的借伞请求", customerId, sn)
 
 		conn , ok:= EquipmentSrv.EquipmentConns[sn]
-		if !ok || conn.State == network.CONN_CLOSED{
+		if !ok || conn.State == network.CONN_CLOSED {
 			utilities.SysLog.Infof("客户【%s】在设备【%s】离线,无法完成借伞请求", customerId, sn)
 			c.JSON(http.StatusOK, gin.H{"success": false, "err": "设备离线" })
+			return
+		}
+		//
+		customer := &models.Customer{}
+		res := customer.CanBorrowFromEquipment(uint(cid), conn.Equipment.PriceId)
+		if !res {
+			utilities.SysLog.Infof("客户【%s】押金不足,无法完成借伞请求", customerId)
+			c.JSON(http.StatusOK, gin.H{"success": false, "err": "押金不足" })
 			return
 		}
 		channelNum, seqId, err := EquipmentSrv.BorrowUmbrella(uint(cid), sn, 0)
