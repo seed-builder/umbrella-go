@@ -4,6 +4,8 @@ import (
 	"github.com/jinzhu/gorm"
 	"umbrella/utilities"
 	"github.com/mitchellh/mapstructure"
+	"regexp"
+	"fmt"
 )
 
 type EquipmentLog struct {
@@ -11,6 +13,7 @@ type EquipmentLog struct {
 	Base
 	Level int
 	Content string
+	EquipmentSn string
 }
 
 func NewEquipmentLog(data map[string]interface{}) *EquipmentLog  {
@@ -41,6 +44,19 @@ func (m *EquipmentLog) Query() *gorm.DB{
 
 func (m *EquipmentLog) NewLog(level int, content string) bool {
 	log := EquipmentLog{ Level: level, Content: content}
+	if sn, ok := ParseEquipmentSn(content); ok {
+		log.EquipmentSn = sn
+	}
 	go utilities.MyDB.Create(&log)
 	return true
+}
+
+func ParseEquipmentSn(content string) (string, bool) {
+	reg := regexp.MustCompile(`设备【(\w+)】`)
+	res := reg.FindSubmatch([]byte(content))
+	if l := len(res); l == 2 {
+		sn := fmt.Sprintf("%q", res[1])
+		return sn, true
+	}
+	return "", false
 }
