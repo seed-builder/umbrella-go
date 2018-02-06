@@ -82,25 +82,25 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 		conn , ok:= EquipmentSrv.EquipmentConns[sn]
 		if !ok || conn.State == network.CONN_CLOSED {
 			utilities.SysLog.Infof("客户【%s】在设备【%s】离线,无法完成借伞请求", customerId, sn)
-			c.JSON(http.StatusOK, gin.H{"success": false, "err": "设备离线" })
+			c.JSON(http.StatusOK, gin.H{"success": false, "err": "设备离线", "code": 101 })
 			return
 		}
 		//
 		customer := &models.Customer{}
-		res := customer.CanBorrowFromEquipment(uint(cid), conn.Equipment.PriceId)
+		res, depositCash := customer.CanBorrowFromEquipment(uint(cid), conn.Equipment.PriceId)
 		if !res {
 			utilities.SysLog.Infof("客户【%s】押金不足,无法完成借伞请求", customerId)
-			c.JSON(http.StatusOK, gin.H{"success": false, "err": "押金不足" })
+			c.JSON(http.StatusOK, gin.H{"success": false, "err": "押金不足", "code": 102, "deposit": depositCash })
 			return
 		}
 		channelNum, seqId, err := EquipmentSrv.BorrowUmbrella(uint(cid), sn, 0)
 		if err != nil {
 			utilities.SysLog.Infof("客户【%s】在设备【%s】借伞请求错误：【%s】", customerId, sn, err.Error())
-			c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
+			c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error(), "code": 103, })
 			return
 		}
 		if channelNum == 0 && seqId == 0 {
-			c.JSON(http.StatusOK, gin.H{"success": false, "err": "无可用通道" })
+			c.JSON(http.StatusOK, gin.H{"success": false, "err": "无可用通道", "code": 104,})
 			return
 		}
 		if err == nil {
@@ -114,7 +114,7 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 
 				if !umbrellaRequest.Success {
 					utilities.SysLog.Infof("客户【%s】在设备【%s】借伞请求错误：【%s】", customerId, sn, umbrellaRequest.Err)
-					c.JSON(http.StatusOK, gin.H{"success": false, "err": umbrellaRequest.Err })
+					c.JSON(http.StatusOK, gin.H{"success": false, "err": umbrellaRequest.Err, "code": 105 })
 					return
 				}
 				if conn, ok := EquipmentSrv.EquipmentConns[sn]; ok {
@@ -131,12 +131,12 @@ func LoadEquipmentRoutes(r gin.IRouter)  {
 						//hire.FreezeDepositFee(umbrella)
 						tx.Commit()
 						utilities.SysLog.Infof("客户【%s】在设备【%s】借伞请求成功", customerId, sn)
-						c.JSON(http.StatusOK, gin.H{"success": true, "hire_id": hire.ID, "channel": channelNum, "err": ""})
+						c.JSON(http.StatusOK, gin.H{"success": true, "hire_id": hire.ID, "channel": channelNum, "err": "", "code": 200})
 						return
 					}else{
 						tx.Rollback()
 						utilities.SysLog.Infof("客户【%s】在设备【%s】借伞请求错误：【%s】", customerId, sn, err.Error())
-						c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error() })
+						c.JSON(http.StatusOK, gin.H{"success": false, "err": err.Error(), "code": 106, })
 					}
 				}
 			}
