@@ -32,6 +32,8 @@ const (
 	RspStatusNotMatch uint8 = 0x0D
 	//伞状态错误
 	RspStatusUmbrellaStatusErr uint8 = 0x0E
+	//伞状态-借出
+	RspStatusUmbrellaStatusOut uint8 = 0x0F
 
 	//通道超时
 	RspStatusChannelTimeout uint8 = 0xA0

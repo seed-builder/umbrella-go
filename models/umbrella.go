@@ -65,6 +65,9 @@ func (m *Umbrella) Check(umbrellaSn string) uint8 {
 	if m.Status == UmbrellaStatusIn {
 		return utilities.RspStatusSuccess
 	}
+	if m.Status == UmbrellaStatusOut {
+		return utilities.RspStatusUmbrellaStatusOut
+	}
 	return utilities.RspStatusUmbrellaStatusErr
 }
 

@@ -302,6 +302,10 @@ func (es *EquipmentService) HandleTakeUmbrellaRsp(r *network.Response, p *networ
 			utilities.SysLog.Noticef("设备【%s】取伞反馈,伞编号【%s】,查询出的该伞状态是【%s】,序列号【%d】",r.Equipment.Sn, sn, utilities.RspStatusDesc(status), rsp.SeqId)
 
 			ur := network.UmbrellaRequest{}
+			// 该伞是借出状态， 则先自动还伞
+			if status == utilities.RspStatusUmbrellaStatusOut {
+				status = umbrella.InEquipment(r.Equipment, sn, rsp.Channel)
+			}
 			if status == utilities.RspStatusSuccess {
 				if ok {
 					ur.Success = true
